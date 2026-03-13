@@ -1,6 +1,6 @@
-# Zabbix GenAI Alert API (Docker Version)
+# Zabbix AI Alert API (Docker Version)
 
-This directory contains the dockerized version of the GenAI alert system, providing a FastAPI-based web service for processing Zabbix alerts.
+This directory contains the dockerized version of the AI alert system, providing a FastAPI-based web service for processing Zabbix alerts using Gemini or OpenAI.
 
 ## Features
 
@@ -19,12 +19,12 @@ This directory is organized into modular components to ensure maintainability an
 - **`html_template.tpl`**: The visual layer. A standalone HTML/CSS template for the `/outputs` dashboard, separate from the application logic.
 - **`Dockerfile` & `docker-compose.yml`**: Containerization and orchestration logic.
 
-The Docker version also leverages shared modules from the root directory (`genai_engine.py` and `siem_fetching.py`) to ensure consistency with the standalone script version.
+The Docker version also leverages shared modules from the root directory (`genai_engine.py`, `openai_engine.py` and `siem_fetching.py`) to ensure consistency with the standalone script version.
 
 ## Prerequisites
 
 - Docker and Docker Compose.
-- Google Gemini API Key.
+- Google Gemini API Key or OpenAI API Key.
 - (Optional) Graylog API Token.
 
 ## Setup
@@ -51,9 +51,12 @@ The Docker version also leverages shared modules from the root directory (`genai
 ### Core Configuration
 | Variable | Description | Default |
 | :--- | :--- | :--- |
-| `GOOGLE_API_KEY` | Your Google Gemini API Key. | **Required** |
+| `AI_PROVIDER` | `gemini` or `openai`. | `gemini` |
+| `DEFAULT_PROMPT` | Custom persona or context prompt for the AI. | Professional Blockchain Specialist |
+| `GOOGLE_API_KEY` | Your Google Gemini API Key. | **Required for gemini** |
 | `GENAI_MODEL` | The Gemini model to use for analysis. | `gemini-pro` |
-| `GENAI_PROMPT` | Custom persona or context prompt for the AI. | Professional Blockchain Specialist |
+| `OPENAI_API_KEY` | Your OpenAI API Key. | **Required for openai** |
+| `OPENAI_MODEL` | The OpenAI model to use. | `gpt-4o-mini` |
 | `GENAI_OUTPUT_TYPE` | Storage target: `FILE`, `DB`, or `BOTH`. | `BOTH` |
 | `GENAI_MAX_OUTPUTS` | Max number of insights to keep (0 for unlimited). | `0` |
 

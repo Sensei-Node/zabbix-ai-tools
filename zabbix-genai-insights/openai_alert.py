@@ -4,14 +4,14 @@
 import sys
 import json
 import os
-from datetime import datetime
 from argparse import ArgumentParser
-import genai_engine
+from datetime import datetime
+import openai_engine
 
 # Load environment variables
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 DEFAULT_PROMPT = os.environ.get("DEFAULT_PROMPT")
-GENAI_MODEL = os.environ.get("GENAI_MODEL", "gemini-pro")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 GRAYLOG_ENABLED = os.environ.get("GRAYLOG_ENABLED", "false").lower() == "true"
 
 def parse_event_message(event_message):
@@ -37,7 +37,7 @@ def main():
     parser = ArgumentParser()
     parser.add_argument("-m", "--event-message", help="Event Message (JSON)")
     parser.add_argument("-z", "--zabbix", action="store_true", help="Zabbix Media Type format")
-    parser.add_argument("-k", "--api-key", help="Google Gemini API Key (overrides env var)")
+    parser.add_argument("-k", "--api-key", help="OpenAI API Key (overrides env var)")
     options = parser.parse_args()
 
     if not options.event_message:
@@ -56,15 +56,15 @@ def main():
         f"event_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     )
     
-    api_key_to_use = options.api_key or GOOGLE_API_KEY
+    api_key_to_use = options.api_key or OPENAI_API_KEY
 
     print(f"Generating insight for Event ID: {event_id}...")
     
     # Call the shared engine
-    result = genai_engine.analyze_alert(
+    result = openai_engine.analyze_alert(
         event_data=event_data,
-        google_api_key=api_key_to_use,
-        model_name=GENAI_MODEL,
+        openai_api_key=api_key_to_use,
+        model_name=OPENAI_MODEL,
         custom_prompt=DEFAULT_PROMPT,
         graylog_enabled=GRAYLOG_ENABLED
     )

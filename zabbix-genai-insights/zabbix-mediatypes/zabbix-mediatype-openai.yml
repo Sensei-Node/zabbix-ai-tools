@@ -1,9 +1,9 @@
 zabbix_export:
   version: '7.0'
   media_types:
-    - name: GeminiAI infrastructure Specialist
+    - name: OpenAI infrastructure Specialist
       type: SCRIPT
-      script_name: genai/genai_alert.py
+      script_name: genai/openai_alert.py
       parameters:
         - sortorder: '0'
           value: '-z'
@@ -16,7 +16,7 @@ zabbix_export:
         - sortorder: '4'
           value: '{ALERT.SENDTO}'
       attempts: '3'
-      description: 'Zabbix-GeminiAI integration for infrastructure monitoring insights.'
+      description: 'Zabbix-OpenAI integration for monitoring infrastructure insights. Add your API Key in the "Send to" field in your user configuration.'
       message_templates:
         - event_source: TRIGGERS
           operation_mode: PROBLEM

@@ -1,13 +1,17 @@
 zabbix_export:
   version: '7.0'
   media_types:
-    - name: GenAI Webhook (Async Docker)
+    - name: GenAI Insights Webhook
       type: WEBHOOK
       parameters:
         - name: alert_message
           value: '{ALERT.MESSAGE}'
         - name: url
           value: 'http://localhost:8000/analyze'
+        - name: ai_provider
+          value: '<gemini or openai>'
+        - name: api_key
+          value: '<your api key>'
       script: |
         try {
             var params = JSON.parse(value),
@@ -22,6 +26,13 @@ zabbix_export:
                     "event_message": params.alert_message,
                     "event_id": "webhook_" + Math.floor(Date.now() / 1000)
                 };
+            }
+
+            if (params.ai_provider && params.ai_provider !== '') {
+                data.AI_PROVIDER = params.ai_provider;
+            }
+            if (params.api_key && params.api_key !== '') {
+                data.API_KEY = params.api_key;
             }
 
             request.addHeader('Content-Type: application/json');

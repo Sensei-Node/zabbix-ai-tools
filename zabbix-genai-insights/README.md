@@ -1,6 +1,6 @@
-# Zabbix GenAI Alert System
+# Zabbix AI Alert System
 
-A unified system for Zabbix alerts using Google GenAI with a Blockchain Infrastructure Specialist persona.
+A unified system for Zabbix alerts using Google GenAI or OpenAI with a Blockchain Infrastructure Specialist persona.
 
 ## Setup
 
@@ -9,9 +9,9 @@ A unified system for Zabbix alerts using Google GenAI with a Blockchain Infrastr
 
 ## Available Versions
 
-### 1. Standalone Script (`genai_alert.py`)
-A simple Python script for direct Zabbix integration.
-- **Usage**: `./genai_alert.py -m "{JSON_DATA}"`
+### 1. Standalone Scripts (`genai_alert.py` / `openai_alert.py`)
+Simple Python scripts for direct Zabbix integration using either Gemini or OpenAI.
+- **Usage**: `./genai_alert.py -m "{JSON_DATA}"` or `./openai_alert.py -m "{JSON_DATA}"`
 - **Output**: Generates a `.txt` file in the same directory.
 
 ### 2. Dockerized API (`docker/`)
@@ -22,14 +22,18 @@ A full FastAPI implementation with additional features.
 
 ## Shared Logic
 
-Both versions share the same core engine (`genai_engine.py`) and SIEM fetching module (`siem_fetching.py`), ensuring consistent analysis regardless of how you deploy it.
+Both versions share the same core engines (`genai_engine.py` / `openai_engine.py`) and SIEM fetching module (`siem_fetching.py`), ensuring consistent analysis regardless of how you deploy it.
 
 ## Environment Variables
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
-| `GOOGLE_API_KEY` | Your Google Gemini API Key. | **Required** |
+| `AI_PROVIDER` | Model provider: `gemini` or `openai`. | `gemini` |
+| `DEFAULT_PROMPT` | Custom persona or context prompt. | - |
+| `GOOGLE_API_KEY` | Your Google Gemini API Key. | **Required for gemini** |
 | `GENAI_MODEL` | The Gemini model to use. | `gemini-pro` |
+| `OPENAI_API_KEY` | Your OpenAI API Key. | **Required for openai** |
+| `OPENAI_MODEL` | The OpenAI model to use. | `gpt-4o-mini` |
 | `GENAI_OUTPUT_TYPE` | (Docker only) `FILE`, `DB`, or `BOTH`. | `BOTH` |
 | `GRAYLOG_ENABLED` | Enable SIEM enrichment. | `false` |
 | `GENAI_MAX_OUTPUTS` | (Docker only) Retention limit. | `0` (Disabled) |

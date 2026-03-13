@@ -9,14 +9,25 @@ from typing import Dict, Any
 # Ensure parent directory is in path for library imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import genai_engine
+import openai_engine
 import db
 
-app = FastAPI(title="Zabbix GenAI Alert API")
+app = FastAPI(title="Zabbix AI Alert API")
 
 # Load environment variables
+AI_PROVIDER = os.environ.get("AI_PROVIDER", "gemini").lower()
+
+# Gemini Config
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-GENAI_PROMPT = os.environ.get("GENAI_PROMPT")
 GENAI_MODEL = os.environ.get("GENAI_MODEL", "gemini-pro")
+
+# OpenAI Config
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+
+# Shared Prompt Config
+DEFAULT_PROMPT = os.environ.get("DEFAULT_PROMPT")
+
 GENAI_OUTPUT_TYPE = os.environ.get("GENAI_OUTPUT_TYPE", "BOTH").upper() # FILE, DB, BOTH
 GENAI_MAX_OUTPUTS = int(os.environ.get("GENAI_MAX_OUTPUTS", 0))
 
@@ -32,7 +43,7 @@ def load_template():
 
 HTML_TEMPLATE = load_template()
 
-if GOOGLE_API_KEY:
+if GOOGLE_API_KEY or OPENAI_API_KEY:
     db.init_db()
 
 def handle_pruning():
@@ -47,15 +58,29 @@ def handle_pruning():
             print(f"Error deleting file for {oid}: {e}")
 
 async def background_process_alert(event_id: str, event_data: Dict[str, Any]):
-    """Background worker for GenAI analysis."""
+    """Background worker for AI analysis."""
     try:
-        result = genai_engine.analyze_alert(
-            event_data=event_data,
-            google_api_key=GOOGLE_API_KEY,
-            model_name=GENAI_MODEL,
-            custom_prompt=GENAI_PROMPT,
-            graylog_enabled=GRAYLOG_ENABLED
-        )
+        req_provider = event_data.get("AI_PROVIDER", AI_PROVIDER).lower()
+        req_api_key = event_data.get("API_KEY")
+
+        if req_provider == "openai":
+            key_to_use = req_api_key or OPENAI_API_KEY
+            result = openai_engine.analyze_alert(
+                event_data=event_data,
+                openai_api_key=key_to_use,
+                model_name=OPENAI_MODEL,
+                custom_prompt=DEFAULT_PROMPT,
+                graylog_enabled=GRAYLOG_ENABLED
+            )
+        else:
+            key_to_use = req_api_key or GOOGLE_API_KEY
+            result = genai_engine.analyze_alert(
+                event_data=event_data,
+                google_api_key=key_to_use,
+                model_name=GENAI_MODEL,
+                custom_prompt=DEFAULT_PROMPT,
+                graylog_enabled=GRAYLOG_ENABLED
+            )
 
         insight = result.get("insight", result.get("error", "Unknown error"))
         siem_logs = result.get("siem_logs")
@@ -123,8 +148,13 @@ async def list_outputs():
 
 @app.post("/analyze", status_code=202)
 async def analyze_event(event_data: Dict[str, Any], background_tasks: BackgroundTasks):
-    if not GOOGLE_API_KEY:
-        raise HTTPException(status_code=500, detail="GOOGLE_API_KEY not configured")
+    req_provider = event_data.get("AI_PROVIDER", AI_PROVIDER).lower()
+    req_api_key = event_data.get("API_KEY")
+
+    if req_provider == "openai" and not (OPENAI_API_KEY or req_api_key):
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured or provided")
+    elif req_provider == "gemini" and not (GOOGLE_API_KEY or req_api_key):
+        raise HTTPException(status_code=500, detail="GOOGLE_API_KEY not configured or provided")
 
     # Extract event_id immediately
     event_id = (
@@ -164,4 +194,5 @@ async def get_output(event_id: str):
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "model": GENAI_MODEL, "output_type": GENAI_OUTPUT_TYPE}
+    model_used = OPENAI_MODEL if AI_PROVIDER == "openai" else GENAI_MODEL
+    return {"status": "ok", "provider": AI_PROVIDER, "model": model_used, "output_type": GENAI_OUTPUT_TYPE}
