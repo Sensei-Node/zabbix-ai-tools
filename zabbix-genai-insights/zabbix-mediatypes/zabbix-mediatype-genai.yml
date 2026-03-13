@@ -1,0 +1,43 @@
+zabbix_export:
+  version: '7.0'
+  media_types:
+    - name: GenAI Blockchain Specialist
+      type: SCRIPT
+      script_name: genai/genai_alert.py
+      parameters:
+        - sortorder: '0'
+          value: '-z'
+        - sortorder: '1'
+          value: '-m {ALERT.MESSAGE}'
+      attempts: '3'
+      description: 'Zabbix-GenAI integration for blockchain infrastructure insights.'
+      message_templates:
+        - event_source: TRIGGERS
+          operation_mode: PROBLEM
+          subject: 'Problem: {EVENT.NAME}'
+          message: |
+            { 
+            "NAME": "{EVENT.NAME}", 
+            "STATUS": "PROBLEM", 
+            "SEVERITY": "{EVENT.SEVERITY}",
+            "HOST": "{HOST.NAME}", 
+            "DESCRIPTION": "{TRIGGER.DESCRIPTION}", 
+            "OPERATIONAL_DATA":  [ "{EVENT.OPDATA}" ], 
+            "EVENT_ID": "{EVENT.ID}", 
+            "EVENT_TAGS": "{EVENT.TAGS}",
+            "URL": "{$ZABBIX.URL}/tr_events.php?triggerid={TRIGGER.ID}&eventid={EVENT.ID}" 
+            }
+        - event_source: TRIGGERS
+          operation_mode: RECOVERY
+          subject: 'Resolved: {EVENT.NAME}'
+          message: |
+            {
+            "NAME": "{EVENT.NAME}", 
+            "STATUS": "OK",
+            "SEVERITY": "{EVENT.SEVERITY}", 
+            "HOST": "{HOST.NAME}", 
+            "OPERATIONAL_DATA":  [ "{EVENT.OPDATA}" ], 
+            "EVENT_ID": "{EVENT.ID}",
+            "EVENT_TAGS": "{EVENT.TAGS}",
+            "URL": "{$ZABBIX.URL}/tr_events.php?triggerid={TRIGGER.ID}&eventid={EVENT.ID}" 
+            }

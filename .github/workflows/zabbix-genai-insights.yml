@@ -1,0 +1,59 @@
+name: Build and Push GenAI Insights
+
+on:
+  push:
+    branches: [ main,develop ]
+    paths:
+      - 'zabbix-genai-insights/**'
+  pull_request:
+    branches: [ main,develop ]
+    paths:
+      - 'zabbix-genai-insights/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    env:
+      IMAGE_TAG: ${{ github.ref_name == 'main' && 'latest' || 'develop' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push GenAI Insights
+        working-directory: zabbix-genai-insights/docker
+        env:
+          REGISTRY_URL: ${{ steps.login-ecr.outputs.registry }}/
+        run: |
+          docker compose build
+          docker compose push
+
+      - name: Prune untagged Images
+        working-directory: zabbix-genai-insights/docker
+        run: |
+          # The script is usually in the sibling directory or root, checking zabbix-mcp-server for reference
+          if [ -f "../../zabbix-mcp-server/aws_cleanup.sh" ]; then
+            chmod +x ../../zabbix-mcp-server/aws_cleanup.sh
+            ../../zabbix-mcp-server/aws_cleanup.sh
+          fi
+
+      - name: Log out of Amazon ECR
+        if: always()    
+        run: docker logout ${{ steps.login-ecr.outputs.registry }}

@@ -1,0 +1,15 @@
+services:
+  genai-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: ${REGISTRY_URL}zabbix-genai-insights:${IMAGE_TAG:-latest}
+    container_name: zabbix-genai-insights
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env.example
+    volumes:
+      - ./data:/app/data
+      - ./outputs:/app/outputs
+    restart: always

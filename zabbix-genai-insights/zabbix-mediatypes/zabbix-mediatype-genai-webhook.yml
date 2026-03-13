@@ -1,0 +1,73 @@
+zabbix_export:
+  version: '7.0'
+  media_types:
+    - name: GenAI Webhook (Async Docker)
+      type: WEBHOOK
+      parameters:
+        - name: alert_message
+          value: '{ALERT.MESSAGE}'
+        - name: url
+          value: 'http://localhost:8000/analyze'
+      script: |
+        try {
+            var params = JSON.parse(value),
+                request = new HttpRequest(),
+                data;
+
+            try {
+                data = JSON.parse(params.alert_message);
+            } catch (e) {
+                // If message is not JSON, wrap it in a simple object
+                data = {
+                    "event_message": params.alert_message,
+                    "event_id": "webhook_" + Math.floor(Date.now() / 1000)
+                };
+            }
+
+            request.addHeader('Content-Type: application/json');
+            
+            Zabbix.log(4, '[ GenAI Webhook ] Sending request to: ' + params.url);
+            var response = request.post(params.url, JSON.stringify(data));
+            Zabbix.log(4, '[ GenAI Webhook ] Received response with status code ' + request.getStatus());
+
+            if (request.getStatus() < 200 || request.getStatus() >= 300) {
+                throw 'Request failed with status code ' + request.getStatus() + ': ' + response;
+            }
+
+            return response;
+        } catch (error) {
+            Zabbix.log(3, '[ GenAI Webhook ] ERROR: ' + error);
+            throw 'Sending failed: ' + error;
+        }
+      timeout: 30s
+      description: 'Zabbix-GenAI Dockerized API integration via Webhook. Returns immediately (Async).'
+      message_templates:
+        - event_source: TRIGGERS
+          operation_mode: PROBLEM
+          subject: 'Problem: {EVENT.NAME}'
+          message: |
+            { 
+            "EVENT_ID": "{EVENT.ID}",
+            "NAME": "{EVENT.NAME}", 
+            "STATUS": "PROBLEM", 
+            "SEVERITY": "{EVENT.SEVERITY}",
+            "HOST": "{HOST.NAME}", 
+            "DESCRIPTION": "{TRIGGER.DESCRIPTION}", 
+            "OPERATIONAL_DATA":  "{EVENT.OPDATA}", 
+            "EVENT_TAGS": "{EVENT.TAGS}",
+            "URL": "{$ZABBIX.URL}/tr_events.php?triggerid={TRIGGER.ID}&eventid={EVENT.ID}" 
+            }
+        - event_source: TRIGGERS
+          operation_mode: RECOVERY
+          subject: 'Resolved: {EVENT.NAME}'
+          message: |
+            {
+            "EVENT_ID": "{EVENT.ID}",
+            "NAME": "{EVENT.NAME}", 
+            "STATUS": "OK",
+            "SEVERITY": "{EVENT.SEVERITY}", 
+            "HOST": "{HOST.NAME}", 
+            "OPERATIONAL_DATA":  "{EVENT.OPDATA}", 
+            "EVENT_TAGS": "{EVENT.TAGS}",
+            "URL": "{$ZABBIX.URL}/tr_events.php?triggerid={TRIGGER.ID}&eventid={EVENT.ID}" 
+            }
