@@ -34,4 +34,4 @@ Both versions share the same core engine (`genai_engine.py`) and SIEM fetching m
 | `GRAYLOG_ENABLED` | Enable SIEM enrichment. | `false` |
 | `GENAI_MAX_OUTPUTS` | (Docker only) Retention limit. | `0` (Disabled) |
 
-For detailed instructions on the Docker version, see [docker/README.md](./docker/README.md).
+For detailed instructions on the Docker version, see [docker/README.md](./docker/README.md)
