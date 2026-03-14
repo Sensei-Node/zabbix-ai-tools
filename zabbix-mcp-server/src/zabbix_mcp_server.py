@@ -13,7 +13,7 @@ License: MIT
 import os
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from fastmcp import FastMCP
 from zabbix_utils import ZabbixAPI
 from dotenv import load_dotenv
@@ -116,7 +116,7 @@ def host_get(
     hostids: Optional[List[str]] = None,
     groupids: Optional[List[str]] = None,
     templateids: Optional[List[str]] = None,
-    output: str = "extend",
+    output: Union[str, List[str]] = "extend",
     search: Optional[Dict[str, str]] = None,
     filter: Optional[Dict[str, Any]] = None,
     limit: Optional[int] = None,
@@ -257,7 +257,7 @@ def host_delete(hostids: List[str]) -> str:
 @mcp.tool()
 def hostgroup_get(
     groupids: Optional[List[str]] = None,
-    output: str = "extend",
+    output: Union[str, List[str]] = "extend",
     search: Optional[Dict[str, str]] = None,
     filter: Optional[Dict[str, Any]] = None,
 ) -> str:
@@ -351,7 +351,7 @@ def item_get(
     hostids: Optional[List[str]] = None,
     groupids: Optional[List[str]] = None,
     templateids: Optional[List[str]] = None,
-    output: str = "extend",
+    output: Union[str, List[str]] = "extend",
     search: Optional[Dict[str, str]] = None,
     filter: Optional[Dict[str, Any]] = None,
     limit: Optional[int] = None,
@@ -509,7 +509,7 @@ def trigger_get(
     hostids: Optional[List[str]] = None,
     groupids: Optional[List[str]] = None,
     templateids: Optional[List[str]] = None,
-    output: str = "extend",
+    output: Union[str, List[str]] = "extend",
     search: Optional[Dict[str, str]] = None,
     filter: Optional[Dict[str, Any]] = None,
     limit: Optional[int] = None,
@@ -656,7 +656,7 @@ def template_get(
     templateids: Optional[List[str]] = None,
     groupids: Optional[List[str]] = None,
     hostids: Optional[List[str]] = None,
-    output: str = "extend",
+    output: Union[str, List[str]] = "extend",
     search: Optional[Dict[str, str]] = None,
     filter: Optional[Dict[str, Any]] = None,
 ) -> str:
@@ -788,7 +788,7 @@ def problem_get(
     groupids: Optional[List[str]] = None,
     hostids: Optional[List[str]] = None,
     objectids: Optional[List[str]] = None,
-    output: str = "extend",
+    output: Union[str, List[str]] = "extend",
     time_from: Optional[int] = None,
     time_till: Optional[int] = None,
     recent: bool = False,

@@ -3,14 +3,16 @@ services:
     build: .
     image: ${REGISTRY_URL}zabbix-mcp:${IMAGE_TAG:-latest}
     container_name: zabbix-mcp
+    env_file:
+      - .env    
     environment:
-      - ZABBIX_URL=${ZABBIX_URL}
-      - ZABBIX_TOKEN=${ZABBIX_TOKEN}
-      - ZABBIX_USER=${ZABBIX_USER}
-      - ZABBIX_PASSWORD=${ZABBIX_PASSWORD}
+      # - ZABBIX_URL=${ZABBIX_URL}
+      # - ZABBIX_TOKEN=${ZABBIX_TOKEN}
+      # - ZABBIX_USER=${ZABBIX_USER}
+      # - ZABBIX_PASSWORD=${ZABBIX_PASSWORD}
       - READ_ONLY=${READ_ONLY:-true}
     ports:
-      - "8000:8000"
+      - "8800:8000"
     restart: unless-stopped
     volumes:
       - ./logs:/app/logs
@@ -19,3 +21,9 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+
+networks:
+  monitoring-network:
+    external: true
+    name: monitoring-network

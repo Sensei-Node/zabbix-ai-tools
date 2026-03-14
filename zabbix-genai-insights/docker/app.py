@@ -57,6 +57,10 @@ def handle_pruning():
         except Exception as e:
             print(f"Error deleting file for {oid}: {e}")
 
+# MCP Config
+MCP_ENABLED = os.environ.get("MCP_ENABLED", "false").lower() == "true"
+ZABBIX_MCP_URL = os.environ.get("ZABBIX_MCP_URL") if MCP_ENABLED else None
+
 async def background_process_alert(event_id: str, event_data: Dict[str, Any]):
     """Background worker for AI analysis."""
     try:
@@ -65,25 +69,28 @@ async def background_process_alert(event_id: str, event_data: Dict[str, Any]):
 
         if req_provider == "openai":
             key_to_use = req_api_key or OPENAI_API_KEY
-            result = openai_engine.analyze_alert(
+            result = await openai_engine.analyze_alert(
                 event_data=event_data,
                 openai_api_key=key_to_use,
                 model_name=OPENAI_MODEL,
                 custom_prompt=DEFAULT_PROMPT,
-                graylog_enabled=GRAYLOG_ENABLED
+                graylog_enabled=GRAYLOG_ENABLED,
+                mcp_url=ZABBIX_MCP_URL
             )
         else:
             key_to_use = req_api_key or GOOGLE_API_KEY
-            result = genai_engine.analyze_alert(
+            result = await genai_engine.analyze_alert(
                 event_data=event_data,
                 google_api_key=key_to_use,
                 model_name=GENAI_MODEL,
                 custom_prompt=DEFAULT_PROMPT,
-                graylog_enabled=GRAYLOG_ENABLED
+                graylog_enabled=GRAYLOG_ENABLED,
+                mcp_url=ZABBIX_MCP_URL
             )
 
         insight = result.get("insight", result.get("error", "Unknown error"))
         siem_logs = result.get("siem_logs")
+        mcp_logs = result.get("mcp_logs")
         status = "COMPLETED" if "insight" in result else "ERROR"
 
         # Update Database
@@ -97,6 +104,8 @@ async def background_process_alert(event_id: str, event_data: Dict[str, Any]):
                 content_to_save = insight
                 if siem_logs:
                     content_to_save += "\n\n--- SIEM ENRICHMENT LOGS ---\n" + siem_logs
+                if mcp_logs:
+                    content_to_save += "\n\n--- ZABBIX MCP ENRICHMENT LOGS ---\n" + mcp_logs
                 f.write(content_to_save)
 
         # Run retention policy

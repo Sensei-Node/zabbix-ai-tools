@@ -96,11 +96,22 @@ curl -X GET "http://localhost:8000/outputs/12346"
 | `GRAYLOG_TOKEN` | API Token for Graylog authentication. | - |
 | `GRAYLOG_SEARCH_MINUTES` | Search window in minutes for recent logs. | `30` |
 
+### Zabbix MCP Server Integration
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `MCP_ENABLED` | Enable fetching context from Zabbix MCP Server. | `false` |
+| `ZABBIX_MCP_URL` | Base SSE URL of the Zabbix MCP Server instance. | `http://zabbix-mcp:8000/sse` |
+
 ## Graylog Enrichment
 
 To enable Graylog support, set `GRAYLOG_ENABLED=true` in `.env`.
 The system will search for logs matching the `HOST` field from Zabbix, automatically removing any IP suffix.
 Exclusion filters for `kernel`, `sshd`, `CRON`, and `systemd` are applied at the query level for efficiency.
+
+## Zabbix MCP Server Integration
+
+To enable MCP support, set `MCP_ENABLED=true` in `.env` and specify the `ZABBIX_MCP_URL`.
+The system connects to the MCP Server using Server-Sent Events (SSE). It exposes the server's tools (like fetching hosts, items, and problems) to the AI as native function calls. The AI dynamically decides if it needs to execute those actions to understand the alert better.
 
 ## Persistence
 

@@ -4,3 +4,4 @@ google-generativeai
 openai
 pydantic
 python-multipart
+mcp
