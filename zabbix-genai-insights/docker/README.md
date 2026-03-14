@@ -37,9 +37,37 @@ The Docker version also leverages shared modules from the root directory (`genai
 
 ## Usage
 
-### Retrieval API
-- **Listing Page**: `http://localhost:8000/outputs` (HTML)
+### Processing Alerts (POST)
+You can submit alerts to the `/analyze` endpoint. The API accepts `AI_PROVIDER` and `API_KEY` in the payload to override the default environment variables.
+
+**Example using default settings (from .env):**
+```bash
+curl -X POST "http://localhost:8000/analyze" \
+     -H "Content-Type: application/json" \
+     -d '{"EVENT_ID": "12345", "NAME": "High CPU Load", "HOST": "server-01"}'
+```
+
+**Example overriding the provider to OpenAI with a custom API Key:**
+```bash
+curl -X POST "http://localhost:8000/analyze" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "EVENT_ID": "12346", 
+           "NAME": "High CPU Load", 
+           "HOST": "server-01", 
+           "AI_PROVIDER": "openai", 
+           "API_KEY": "sk-your-openai-api-key"
+         }'
+```
+
+### Retrieval API (GET)
+- **Listing Page**: `http://localhost:8000/outputs` (HTML dashboard)
 - **Specific Insight**: `GET /outputs/{event_id}` (Raw text)
+
+**Example to retrieve a specific insight:**
+```bash
+curl -X GET "http://localhost:8000/outputs/12346"
+```
 
 ### Zabbix Configuration
 1.  Import the Media Type template: [zabbix-mediatype-genai-webhook.yml](./zabbix-mediatype-genai-webhook.yml).
