@@ -61,7 +61,7 @@ async def async_main():
         f"event_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     )
     
-    api_key_to_use = event_data.get("API_KEY") or options.api_key or OPENAI_API_KEY
+    api_key_to_use = options.api_key or OPENAI_API_KEY
 
     print(f"Generating insight for Event ID: {event_id}...")
     

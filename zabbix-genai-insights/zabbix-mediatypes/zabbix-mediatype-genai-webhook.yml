@@ -12,8 +12,6 @@ zabbix_export:
           value: '<gemini or openai>'
         - name: api_key
           value: '<your api key>'
-        - name: event_id
-          value: '{EVENT.ID}'
       script: |
         try {
             var params = JSON.parse(value),
@@ -35,9 +33,6 @@ zabbix_export:
             }
             if (params.api_key && params.api_key !== '') {
                 data.API_KEY = params.api_key;
-            }
-            if (params.event_id && params.event_id !== '') {
-                data.EVENT_ID = params.event_id;
             }
 
             request.addHeader('Content-Type: application/json');
