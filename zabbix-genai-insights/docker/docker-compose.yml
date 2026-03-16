@@ -8,10 +8,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ../.env
-    # environment:
-    #   - MCP_ENABLED=${MCP_ENABLED:-false}
-    #   - ZABBIX_MCP_URL=${ZABBIX_MCP_URL:-http://zabbix-mcp:8000/sse}
+      - ../.env.example
     volumes:
       - ./data:/app/data
       - ./outputs:/app/outputs
