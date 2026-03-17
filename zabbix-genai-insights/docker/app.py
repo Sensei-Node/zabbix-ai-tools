@@ -218,8 +218,7 @@ async def health_check():
     if GRAYLOG_ENABLED and GRAYLOG_URL:
         try:
             # Check Graylog connectivity
-            # We hit /api/system/status which is a common health endpoint for Graylog
-            g_url = f"{GRAYLOG_URL.rstrip('/')}/api/system/status"
+            g_url = f"{GRAYLOG_URL.rstrip('/')}"
             resp = requests.get(g_url, timeout=5, verify=False)
             health_status["siem_reachable"] = resp.status_code == 200
         except Exception as e:
@@ -229,9 +228,7 @@ async def health_check():
     if MCP_ENABLED and ZABBIX_MCP_URL:
         try:
             # Check MCP connectivity
-            # ZABBIX_MCP_URL usually points to /sse, we check if we can reach it
             resp = requests.get(ZABBIX_MCP_URL, timeout=5)
-            # If server responds with anything but a server error, we consider it alive
             health_status["mcp_reachable"] = resp.status_code < 500
         except Exception as e:
             print(f"Health check: Zabbix MCP unreachable at {ZABBIX_MCP_URL}: {e}")
