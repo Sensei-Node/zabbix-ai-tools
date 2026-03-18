@@ -28,6 +28,11 @@ def get_memory_instance():
         
     if _memory_instance is None:
         try:
+            # Ensure the directory exists
+            if not os.path.exists(DATA_DIR):
+                logger.info(f"Creating Mem0 data directory: {DATA_DIR}")
+                os.makedirs(DATA_DIR, exist_ok=True)
+
             # Base config with local vector store
             config = {
                 "vector_store": {
@@ -97,6 +102,10 @@ def get_memory_instance():
                     "provider": "google",
                     "config": {"model": "models/embedding-001", "api_key": GOOGLE_API_KEY}
                 }
+            
+            elif not (AI_API_KEY or OPENAI_API_KEY or DEEPSEEK_API_KEY or GOOGLE_API_KEY):
+                logger.warning("No AI API keys found. Perennial memory will be disabled.")
+                return None
             
             # 2. Set Metadata store path to ensure it stays in DATA_DIR
             # In newer Mem0 versions, this preserves the SQLite db in the specified location.
