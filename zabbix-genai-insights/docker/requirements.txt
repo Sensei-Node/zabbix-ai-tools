@@ -7,3 +7,4 @@ python-multipart
 mcp
 mem0ai
 chromadb
+requests
