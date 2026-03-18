@@ -95,11 +95,11 @@ def get_memory_instance():
             elif GOOGLE_API_KEY:
                 logger.info("Configuring Mem0 with Google Gemini provider.")
                 config["llm"] = {
-                    "provider": "google",
+                    "provider": "gemini",
                     "config": {"model": GENAI_MODEL or "gemini-1.5-flash", "api_key": GOOGLE_API_KEY}
                 }
                 config["embedder"] = {
-                    "provider": "google",
+                    "provider": "gemini",
                     "config": {"model": "models/embedding-001", "api_key": GOOGLE_API_KEY}
                 }
             
