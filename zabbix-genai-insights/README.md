@@ -1,6 +1,6 @@
 # Zabbix AI Alert System
 
-A unified system for Zabbix alerts using Google GenAI or OpenAI with a Blockchain Infrastructure Specialist persona.
+A unified system for Zabbix alerts using Google GenAI, OpenAI, or DeepSeek with a Blockchain Infrastructure Specialist persona.
 
 ## Setup
 
@@ -9,9 +9,10 @@ A unified system for Zabbix alerts using Google GenAI or OpenAI with a Blockchai
 
 ## Available Versions
 
-### 1. Standalone Scripts (`genai_alert.py` / `openai_alert.py`)
-Simple Python scripts for direct Zabbix integration using either Gemini or OpenAI.
-- **Usage**: `./genai_alert.py -m "{JSON_DATA}"` or `./openai_alert.py -m "{JSON_DATA}"`
+### 1. Unified Standalone Script (`ai_insights.py`)
+A single Python script for direct Zabbix integration that supports Google Gemini, OpenAI, and DeepSeek.
+- **Usage**: `./ai_insights.py -m "{JSON_DATA}"`
+- **Configuration**: Uses `AI_PROVIDER`, `AI_API_KEY`, and `AI_MODEL` (or provider-specific variables).
 - **Output**: Generates a `.txt` file in the same directory.
 
 - **Features**: SQLite persistence, HTML navigation dashboard at `/outputs`, SIEM/Graylog enrichment, Perennial Memory (Mem0).
@@ -19,14 +20,13 @@ Simple Python scripts for direct Zabbix integration using either Gemini or OpenA
 
 ## Shared Logic
 
-Both versions share the same core engines (`genai_engine.py` / `openai_engine.py`) and SIEM fetching module (`siem_fetching.py`). The Docker version additionally utilizes `memory_manager.py` for long-term (perennial) context.
-ensuring consistent analysis regardless of how you deploy it.
+Both versions share the same core engines (`genai_engine.py` / `openai_engine.py` / `dsk_engine.py`) and SIEM fetching module (`siem_fetching.py`). The Docker version additionally utilizes `memory_manager.py` for long-term (perennial) context, ensuring consistent analysis regardless of how you deploy it.
 
 ## Environment Variables
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
-| `AI_PROVIDER` | Model provider: `gemini` or `openai`. | `gemini` |
+| `AI_PROVIDER` | Model provider: `gemini`, `openai`, or `deepseek`. | `gemini` |
 | `AI_API_KEY` | Unified API Key (overrides provider specific keys). | - |
 | `AI_MODEL` | Unified Model Name (overrides provider specific models). | - |
 | `DEFAULT_PROMPT` | Custom persona or context prompt. | - |
