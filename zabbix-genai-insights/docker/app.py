@@ -12,6 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import genai_engine
 import openai_engine
 import db
+import memory_manager
 
 app = FastAPI(title="Zabbix AI Alert API")
 
@@ -65,6 +66,12 @@ ZABBIX_MCP_URL = os.environ.get("ZABBIX_MCP_URL") if MCP_ENABLED else None
 
 async def background_process_alert(event_id: str, event_data: Dict[str, Any]):
     """Background worker for AI analysis."""
+    # 1. Identify Host for history
+    host_id = event_data.get("HOST") or event_data.get("host") or "unknown"
+    
+    # 2. Fetch Perennial Memory from Mem0
+    memories = memory_manager.get_perennial_context(host_id)
+
     try:
         req_provider = event_data.get("AI_PROVIDER", AI_PROVIDER).lower()
         req_api_key = event_data.get("API_KEY")
@@ -77,7 +84,8 @@ async def background_process_alert(event_id: str, event_data: Dict[str, Any]):
                 model_name=OPENAI_MODEL,
                 custom_prompt=DEFAULT_PROMPT,
                 graylog_enabled=GRAYLOG_ENABLED,
-                mcp_url=ZABBIX_MCP_URL
+                mcp_url=ZABBIX_MCP_URL,
+                memories=memories
             )
         else:
             key_to_use = req_api_key or GOOGLE_API_KEY
@@ -87,7 +95,8 @@ async def background_process_alert(event_id: str, event_data: Dict[str, Any]):
                 model_name=GENAI_MODEL,
                 custom_prompt=DEFAULT_PROMPT,
                 graylog_enabled=GRAYLOG_ENABLED,
-                mcp_url=ZABBIX_MCP_URL
+                mcp_url=ZABBIX_MCP_URL,
+                memories=memories
             )
 
         insight = result.get("insight", result.get("error", "Unknown error"))
@@ -109,6 +118,9 @@ async def background_process_alert(event_id: str, event_data: Dict[str, Any]):
                 if mcp_logs:
                     content_to_save += "\n\n--- ZABBIX MCP ENRICHMENT LOGS ---\n" + mcp_logs
                 f.write(content_to_save)
+            
+            # 3. Add to Perennial Memory
+            memory_manager.add_perennial_insight(host_id, insight)
 
         # Run retention policy
         handle_pruning()

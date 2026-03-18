@@ -36,7 +36,7 @@ def _pb_to_native(obj):
     else:
         return obj
     
-async def analyze_alert(event_data, google_api_key=None, model_name="gemini-pro", custom_prompt=None, graylog_enabled=False, mcp_url=None):
+async def analyze_alert(event_data, google_api_key=None, model_name="gemini-pro", custom_prompt=None, graylog_enabled=False, mcp_url=None, memories=None):
     """
     Core analysis engine shared between standalone script and Docker API.
     
@@ -47,6 +47,7 @@ async def analyze_alert(event_data, google_api_key=None, model_name="gemini-pro"
         custom_prompt (str): Optional context prompt override.
         graylog_enabled (bool): Whether to fetch SIEM enrichment logs.
         mcp_url (str): The Zabbix MCP Server SSE endpoint URL.
+        memories (str): Optional string of previous extracted facts for context.
         
     Returns:
         dict: A dictionary containing the insight and any enrichment logs used.
@@ -80,6 +81,8 @@ async def analyze_alert(event_data, google_api_key=None, model_name="gemini-pro"
     prompt_context = f"Event Data: {json.dumps(event_data, indent=2, ensure_ascii=False)}"
     if siem_logs:
         prompt_context += f"\n\nExtra Context of Logs (SIEM):\n{siem_logs}"
+    if memories:
+        prompt_context += f"\n\nPerennial Context (Known facts about this host):\n{memories}"
 
     # 3. Handle MCP and Tool Calling
     tools = []

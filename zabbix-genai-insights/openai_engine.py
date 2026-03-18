@@ -9,7 +9,7 @@ from mcp_client import ZabbixMCPClient
 
 logger = logging.getLogger(__name__)
 
-async def analyze_alert(event_data, openai_api_key=None, model_name="gpt-4o-mini", custom_prompt=None, graylog_enabled=False, mcp_url=None):
+async def analyze_alert(event_data, openai_api_key=None, model_name="gpt-4o-mini", custom_prompt=None, graylog_enabled=False, mcp_url=None, memories=None):
     """
     Core analysis engine shared between standalone script and Docker API.
     
@@ -20,6 +20,7 @@ async def analyze_alert(event_data, openai_api_key=None, model_name="gpt-4o-mini
         custom_prompt (str): Optional context prompt override.
         graylog_enabled (bool): Whether to fetch SIEM enrichment logs.
         mcp_url (str): The Zabbix MCP Server SSE endpoint URL.
+        memories (str): Optional string of previous extracted facts for context.
         
     Returns:
         dict: A dictionary containing the insight and any enrichment logs used.
@@ -57,10 +58,12 @@ async def analyze_alert(event_data, openai_api_key=None, model_name="gpt-4o-mini
     if siem_logs:
         prompt_context += f"\n\nExtra Context of Logs (SIEM):\n{siem_logs}"
 
-    messages = [
-        {"role": "system", "content": selected_prompt},
-        {"role": "user", "content": prompt_context}
-    ]
+    messages = []
+    if memories:
+        messages.append({"role": "system", "content": f"Perennial Context (Known facts about this host):\n{memories}"})
+    
+    messages.append({"role": "system", "content": selected_prompt})
+    messages.append({"role": "user", "content": prompt_context})
 
     # 3. Handle MCP and Tool Calling
     tools = []

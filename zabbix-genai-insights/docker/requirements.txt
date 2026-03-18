@@ -5,3 +5,4 @@ openai
 pydantic
 python-multipart
 mcp
+mem0ai
