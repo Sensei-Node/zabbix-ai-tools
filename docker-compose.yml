@@ -1,0 +1,30 @@
+version: "3"
+services:
+  mcp:
+    container_name: zabbix-mcp
+    restart: unless-stopped
+    image: ${REGISTRY_URL}zabbix-mcp:${IMAGE_TAG:-latest}
+    env_file:
+      - ./zabbix-mcp-server/.env
+    #volumes:
+      #- /var/log/${COMPOSE_PROJECT_NAME}/zabbix-mcp-server:/app/log
+    ports:
+      - 8000:8000
+    healthcheck:
+      test: ["CMD", "python", "test_server.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  genai-insights:
+    container_name: zabbix-genai
+    restart: unless-stopped
+    image: ${REGISTRY_URL}zabbix-genai-insights:${IMAGE_TAG:-latest}
+    env_file:
+      - ./zabbix-genai-insights/.env
+    #volumes:
+      #- /etc/localtime:/etc/localtime:ro
+      #- ./xtras/genai-data:/app/data
+      #- ./xtras/genai-outputs:/app/outputs      
+    ports:
+      - 8800:8000

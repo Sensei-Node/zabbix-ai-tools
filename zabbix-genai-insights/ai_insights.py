@@ -76,7 +76,7 @@ async def async_main():
         else:
             api_key = os.environ.get("GOOGLE_API_KEY")
 
-    # Resolve Model
+    # Resolve Model (Options > EventData > AI_MODEL > AI_MODEL_ENV > Provider Default)
     model = options.model or event_data.get("AI_MODEL") or AI_MODEL
     if not model:
         if provider == "openai":
@@ -84,7 +84,7 @@ async def async_main():
         elif provider == "deepseek":
             model = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
         else:
-            model = os.environ.get("GENAI_MODEL", "gemini-pro")
+            model = os.environ.get("GENAI_MODEL", "gemini-1.5-flash")
 
     event_id = (
         event_data.get("EVENT_ID") or 

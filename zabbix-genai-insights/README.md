@@ -37,7 +37,7 @@ The Docker version additionally utilizes `memory_manager.py` for long-term (pere
 | `AI_MODEL` | Unified Model Name (overrides provider specific models). | - |
 | `DEFAULT_PROMPT` | Custom persona or context prompt. | - |
 | `GOOGLE_API_KEY` | Your Google Gemini API Key. | **Required for gemini** |
-| `GENAI_MODEL` | The Gemini model to use. | `gemini-pro` |
+| `GENAI_MODEL` | The Gemini model to use. | `gemini-1.5-flash` |
 | `OPENAI_API_KEY` | Your OpenAI API Key. | **Required for openai** |
 | `OPENAI_MODEL` | The OpenAI model to use. | `gpt-4o-mini` |
 | `DEEPSEEK_API_KEY` | Your DeepSeek API Key. | **Required for deepseek** |

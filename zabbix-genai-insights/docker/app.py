@@ -25,7 +25,7 @@ AI_MODEL = os.environ.get("AI_MODEL")
 
 # Gemini Config
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-GENAI_MODEL = os.environ.get("GENAI_MODEL", "gemini-pro")
+GENAI_MODEL = os.environ.get("GENAI_MODEL", "gemini-1.5-flash")
 
 # OpenAI Config
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")

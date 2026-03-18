@@ -2,7 +2,7 @@ fastapi
 uvicorn
 pydantic
 python-multipart
-google-generativeai
+google-genai
 openai
 requests
 python-dotenv
