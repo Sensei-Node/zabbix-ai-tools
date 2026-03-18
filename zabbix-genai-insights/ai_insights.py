@@ -66,8 +66,8 @@ async def async_main():
     provider = options.provider or event_data.get("AI_PROVIDER") or AI_PROVIDER
     provider = provider.lower()
 
-    # Resolve API Key (Options > EventData > AI_API_KEY > ProviderSpecificKey)
-    api_key = options.api_key or event_data.get("API_KEY") or AI_API_KEY
+    # Resolve API Key (Options > EventData > AI_API_KEY > API_KEY > AI_API_KEY_ENV)
+    api_key = options.api_key or event_data.get("AI_API_KEY") or event_data.get("API_KEY") or AI_API_KEY
     if not api_key:
         if provider == "openai":
             api_key = os.environ.get("OPENAI_API_KEY")

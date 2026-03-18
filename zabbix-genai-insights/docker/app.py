@@ -18,7 +18,10 @@ import memory_manager
 app = FastAPI(title="Zabbix AI Alert API")
 
 # Load environment variables
+# Unified Config
 AI_PROVIDER = os.environ.get("AI_PROVIDER", "gemini").lower()
+AI_API_KEY = os.environ.get("AI_API_KEY")
+AI_MODEL = os.environ.get("AI_MODEL")
 
 # Gemini Config
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
@@ -51,7 +54,7 @@ def load_template():
 
 HTML_TEMPLATE = load_template()
 
-if GOOGLE_API_KEY or OPENAI_API_KEY:
+if GOOGLE_API_KEY or OPENAI_API_KEY or DEEPSEEK_API_KEY or AI_API_KEY:
     db.init_db()
 
 def handle_pruning():
@@ -79,36 +82,52 @@ async def background_process_alert(event_id: str, event_data: Dict[str, Any]):
 
     try:
         req_provider = event_data.get("AI_PROVIDER", AI_PROVIDER).lower()
-        req_api_key = event_data.get("API_KEY")
+        
+        # Resolve API Key
+        api_key = event_data.get("AI_API_KEY") or event_data.get("API_KEY") or AI_API_KEY
+        if not api_key:
+            if req_provider == "openai":
+                api_key = OPENAI_API_KEY
+            elif req_provider == "deepseek":
+                api_key = DEEPSEEK_API_KEY
+            else:
+                api_key = GOOGLE_API_KEY
+
+        # Resolve Model
+        model = event_data.get("AI_MODEL") or AI_MODEL
+        if not model:
+            if req_provider == "openai":
+                model = OPENAI_MODEL
+            elif req_provider == "deepseek":
+                model = DEEPSEEK_MODEL
+            else:
+                model = GENAI_MODEL
 
         if req_provider == "openai":
-            key_to_use = req_api_key or OPENAI_API_KEY
             result = await openai_engine.analyze_alert(
                 event_data=event_data,
-                openai_api_key=key_to_use,
-                model_name=OPENAI_MODEL,
+                openai_api_key=api_key,
+                model_name=model,
                 custom_prompt=DEFAULT_PROMPT,
                 graylog_enabled=GRAYLOG_ENABLED,
                 mcp_url=ZABBIX_MCP_URL,
                 memories=memories
             )
         elif req_provider == "deepseek":
-            key_to_use = req_api_key or DEEPSEEK_API_KEY
             result = await dsk_engine.analyze_alert(
                 event_data=event_data,
-                dsk_api_key=key_to_use,
-                model_name=DEEPSEEK_MODEL,
+                dsk_api_key=api_key,
+                model_name=model,
                 custom_prompt=DEFAULT_PROMPT,
                 graylog_enabled=GRAYLOG_ENABLED,
                 mcp_url=ZABBIX_MCP_URL,
                 memories=memories
             )
         else:
-            key_to_use = req_api_key or GOOGLE_API_KEY
             result = await genai_engine.analyze_alert(
                 event_data=event_data,
-                google_api_key=key_to_use,
-                model_name=GENAI_MODEL,
+                google_api_key=api_key,
+                model_name=model,
                 custom_prompt=DEFAULT_PROMPT,
                 graylog_enabled=GRAYLOG_ENABLED,
                 mcp_url=ZABBIX_MCP_URL,
@@ -188,8 +207,9 @@ async def list_outputs():
 @app.post("/analyze", status_code=202)
 async def analyze_event(event_data: Dict[str, Any], background_tasks: BackgroundTasks):
     req_provider = event_data.get("AI_PROVIDER", AI_PROVIDER).lower()
-    req_api_key = event_data.get("API_KEY")
+    req_api_key = event_data.get("AI_API_KEY") or event_data.get("API_KEY") or AI_API_KEY
 
+    # Validate if any API key exists (unified or provider-specific)
     if req_provider == "openai" and not (OPENAI_API_KEY or req_api_key):
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured or provided")
     elif req_provider == "gemini" and not (GOOGLE_API_KEY or req_api_key):
@@ -235,12 +255,15 @@ async def get_output(event_id: str):
 
 @app.get("/health")
 async def health_check():
-    if AI_PROVIDER == "openai":
-        model_used = OPENAI_MODEL
-    elif AI_PROVIDER == "deepseek":
-        model_used = DEEPSEEK_MODEL
-    else:
-        model_used = GENAI_MODEL
+    # Model name resolution for health status
+    model_used = AI_MODEL
+    if not model_used:
+        if AI_PROVIDER == "openai":
+            model_used = OPENAI_MODEL
+        elif AI_PROVIDER == "deepseek":
+            model_used = DEEPSEEK_MODEL
+        else:
+            model_used = GENAI_MODEL
         
     health_status = {
         "status": "ok",

@@ -9,9 +9,14 @@ logger = logging.getLogger(__name__)
 DATA_DIR = os.environ.get("MEM0_DIR", "/app/data/mem0")
 
 # Mem0 needs an LLM to extract facts. 
+AI_API_KEY = os.environ.get("AI_API_KEY")
+AI_MODEL = os.environ.get("AI_MODEL")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+GENAI_MODEL = os.environ.get("GENAI_MODEL")
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
+DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL")
 
 _memory_instance = None
 
@@ -33,11 +38,26 @@ def get_memory_instance():
             
             # 1. Configure LLM and Embedder based on available keys
             # Mem0 requires an LLM for fact extraction and an embedder for vector search.
-            if OPENAI_API_KEY:
+            
+            # Priority 1: AI_API_KEY (General purpose)
+            # If AI_API_KEY is provided, we try to use it with OpenAI provider by default as it's common
+            if AI_API_KEY:
+                logger.info("Configuring Mem0 with unified AI_API_KEY.")
+                config["llm"] = {
+                    "provider": "openai",
+                    "config": {"model": AI_MODEL or "gpt-4o-mini", "api_key": AI_API_KEY}
+                }
+                config["embedder"] = {
+                    "provider": "openai",
+                    "config": {"model": "text-embedding-3-small", "api_key": AI_API_KEY}
+                }
+
+            # Priority 2: Specific Provider Keys
+            elif OPENAI_API_KEY:
                 logger.info("Configuring Mem0 with OpenAI provider.")
                 config["llm"] = {
                     "provider": "openai",
-                    "config": {"model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini"), "api_key": OPENAI_API_KEY}
+                    "config": {"model": OPENAI_MODEL or "gpt-4o-mini", "api_key": OPENAI_API_KEY}
                 }
                 config["embedder"] = {
                     "provider": "openai",
@@ -49,7 +69,7 @@ def get_memory_instance():
                 config["llm"] = {
                     "provider": "openai",
                     "config": {
-                        "model": os.environ.get("DEEPSEEK_MODEL", "deepseek-chat"), 
+                        "model": DEEPSEEK_MODEL or "deepseek-chat", 
                         "api_key": DEEPSEEK_API_KEY,
                         "base_url": "https://api.deepseek.com"
                     }
@@ -67,7 +87,7 @@ def get_memory_instance():
                 logger.info("Configuring Mem0 with Google Gemini provider.")
                 config["llm"] = {
                     "provider": "google",
-                    "config": {"model": os.environ.get("GENAI_MODEL", "gemini-1.5-flash"), "api_key": GOOGLE_API_KEY}
+                    "config": {"model": GENAI_MODEL or "gemini-1.5-flash", "api_key": GOOGLE_API_KEY}
                 }
                 config["embedder"] = {
                     "provider": "google",

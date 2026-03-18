@@ -12,7 +12,11 @@ A unified system for Zabbix alerts using Google GenAI, OpenAI, or DeepSeek with 
 ### 1. Unified Standalone Script (`ai_insights.py`)
 A single Python script for direct Zabbix integration that supports Google Gemini, OpenAI, and DeepSeek.
 - **Usage**: `./ai_insights.py -m "{JSON_DATA}"`
-- **Configuration**: Uses `AI_PROVIDER`, `AI_API_KEY`, and `AI_MODEL` (or provider-specific variables).
+- **Configuration Hierarchy** (Priority):
+    1. Command line arguments (`-k`, `-model`).
+    2. Payload keys (`AI_API_KEY`, `AI_MODEL`).
+    3. Unified environment variables (`AI_API_KEY`, `AI_MODEL`).
+    4. Provider-specific variables (`GOOGLE_API_KEY`, `OPENAI_API_KEY`, etc.).
 - **Output**: Generates a `.txt` file in the same directory.
 
 - **Features**: SQLite persistence, HTML navigation dashboard at `/outputs`, SIEM/Graylog enrichment, Perennial Memory (Mem0).

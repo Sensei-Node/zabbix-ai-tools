@@ -7,10 +7,10 @@ zabbix_export:
         - name: alert_message
           value: '{ALERT.MESSAGE}'
         - name: url
-          value: 'http://localhost:8000/analyze'
+          value: 'http://genai-insights:8000/analyze'
         - name: ai_provider
           value: '<gemini or openai>'
-        - name: api_key
+        - name: ai_api_key
           value: '<your api key>'
       script: |
         try {
@@ -31,8 +31,8 @@ zabbix_export:
             if (params.ai_provider && params.ai_provider !== '') {
                 data.AI_PROVIDER = params.ai_provider;
             }
-            if (params.api_key && params.api_key !== '') {
-                data.API_KEY = params.api_key;
+            if (params.ai_api_key && params.ai_api_key !== '') {
+                data.AI_API_KEY = params.ai_api_key;
             }
 
             request.addHeader('Content-Type: application/json');

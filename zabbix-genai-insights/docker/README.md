@@ -79,9 +79,9 @@ curl -X GET "http://localhost:8000/outputs/12346"
 ## Environment Variables
 
 ### Core Configuration
-| Variable | Description | Default |
-| :--- | :--- | :--- |
 | `AI_PROVIDER` | `gemini`, `openai`, or `deepseek`. | `gemini` |
+| `AI_API_KEY` | Unified API Key (overrides specific keys). | - |
+| `AI_MODEL` | Unified Model Name (overrides specific models). | - |
 | `DEFAULT_PROMPT` | Custom persona or context prompt for the AI. | Professional Blockchain Specialist |
 | `GOOGLE_API_KEY` | Your Google Gemini API Key. | **Required for gemini** |
 | `GENAI_MODEL` | The Gemini model to use for analysis. | `gemini-pro` |
