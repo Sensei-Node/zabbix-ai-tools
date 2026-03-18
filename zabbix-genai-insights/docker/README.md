@@ -133,3 +133,12 @@ Memories are stored in a local ChromaDB vector store inside `${MEM0_DIR}`.
 The DeepSeek engine (`dsk_engine.py`) uses an OpenAI-compatible API. Both the analysis and the perennial memory manager support DeepSeek as a back-end. 
 
 Insights are stored in `./data/genai_insights.db` and as `.txt` files in `./outputs/`. Perennial memories are stored in `./data/mem0/`.
+
+
+##  REFERENCE GUIDE
+
+* [ZABBIX MCP SERVER](https://github.com/mpeirone/zabbix-mcp-server)
+* [MEM0](https://github.com/mem0ai/mem0)
+* [GOOGLE GENERATIVE AI](https://pypi.org/project/google-generativeai/)
+* [CHROMA DB](https://docs.trychroma.com/docs/overview/introduction)
+* [OPENAI PYTHON](https://github.com/openai/openai-python)
