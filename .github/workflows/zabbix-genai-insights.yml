@@ -9,6 +9,9 @@ on:
     branches: [ main,develop ]
     paths:
       - 'zabbix-genai-insights/**'
+      - '!zabbix-genai-insights/docker/outputs/**'
+      - '!zabbix-genai-insights/*.md'
+      - '!zabbix-genai-insights/images/**'
   workflow_dispatch:
 
 permissions:

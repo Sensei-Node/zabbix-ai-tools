@@ -2,6 +2,9 @@
 
 This directory contains the dockerized version of the AI alert system, providing a FastAPI-based web service for processing Zabbix alerts using Gemini, OpenAI, or DeepSeek.
 
+
+![Solution diagram](../images/diagram.png)
+
 ## Features
 
 - **Asynchronous Processing**: Immediate `202 Accepted` response to prevent timeouts.
