@@ -1,5 +1,11 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
 google-generativeai
+openai
 requests
 python-dotenv
-openai
 mcp
+mem0ai
+chromadb

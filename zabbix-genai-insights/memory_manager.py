@@ -5,6 +5,7 @@ from mem0 import Memory
 logger = logging.getLogger(__name__)
 
 # Configuration for Mem0
+MEMORY_ENABLED = os.environ.get("MEMORY_ENABLED", "false").lower() == "true"
 # We store data in /app/data/mem0 to persist in Docker
 DATA_DIR = os.environ.get("MEM0_DIR", "/app/data/mem0")
 
@@ -22,6 +23,9 @@ _memory_instance = None
 
 def get_memory_instance():
     global _memory_instance
+    if not MEMORY_ENABLED:
+        return None
+        
     if _memory_instance is None:
         try:
             # Base config with local vector store

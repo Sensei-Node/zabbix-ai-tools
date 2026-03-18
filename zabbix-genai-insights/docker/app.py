@@ -38,8 +38,8 @@ DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
 # Shared Prompt Config
 DEFAULT_PROMPT = os.environ.get("DEFAULT_PROMPT")
 
-GENAI_OUTPUT_TYPE = os.environ.get("GENAI_OUTPUT_TYPE", "BOTH").upper() # FILE, DB, BOTH
-GENAI_MAX_OUTPUTS = int(os.environ.get("GENAI_MAX_OUTPUTS", 0))
+OUTPUT_TYPE = os.environ.get("OUTPUT_TYPE", os.environ.get("GENAI_OUTPUT_TYPE", "BOTH")).upper() # FILE, DB, BOTH
+MAX_OUTPUTS = int(os.environ.get("MAX_OUTPUTS", os.environ.get("GENAI_MAX_OUTPUTS", 0)))
 
 # Graylog Config
 GRAYLOG_ENABLED = os.environ.get("GRAYLOG_ENABLED", "false").lower() == "true"
@@ -59,7 +59,7 @@ if GOOGLE_API_KEY or OPENAI_API_KEY or DEEPSEEK_API_KEY or AI_API_KEY:
 
 def handle_pruning():
     """Handles deletion of files and DB entries based on retention policy."""
-    deleted_ids = db.prune_old_outputs(GENAI_MAX_OUTPUTS)
+    deleted_ids = db.prune_old_outputs(MAX_OUTPUTS)
     for oid in deleted_ids:
         try:
             fpath = f"/app/outputs/{oid}.txt"
@@ -143,7 +143,7 @@ async def background_process_alert(event_id: str, event_data: Dict[str, Any]):
         db.update_insight_status(event_id, insight, status)
 
         # Save to File if COMPLETED
-        if status == "COMPLETED" and GENAI_OUTPUT_TYPE in ["FILE", "BOTH"]:
+        if status == "COMPLETED" and OUTPUT_TYPE in ["FILE", "BOTH"]:
             filename = f"/app/outputs/{event_id}.txt"
             os.makedirs("/app/outputs", exist_ok=True)
             with open(filename, "w", encoding="utf-8") as f:
@@ -269,7 +269,7 @@ async def health_check():
         "status": "ok",
         "provider": AI_PROVIDER,
         "model": model_used,
-        "output_type": GENAI_OUTPUT_TYPE,
+        "output_type": OUTPUT_TYPE,
         "siem_enrichment": GRAYLOG_ENABLED,
         "mcp_enabled": MCP_ENABLED
     }

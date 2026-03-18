@@ -9,7 +9,7 @@ This directory contains the dockerized version of the AI alert system, providing
 - **HTML Listing UI**: Beautiful dashboard at `/outputs` with status badges.
 - **Graylog SIEM Enrichment**: Shared core logic with filtering.
 - **Perennial Memory (Mem0ai)**: Intelligent memory layer that retains key facts per host across multiple alerts.
-- **Retention Policy**: Automatic pruning (`GENAI_MAX_OUTPUTS`).
+- **Retention Policy**: Automatic pruning (`MAX_OUTPUTS`).
 
 ## Project Structure
 
@@ -89,8 +89,9 @@ curl -X GET "http://localhost:8000/outputs/12346"
 | `OPENAI_MODEL` | The OpenAI model to use. | `gpt-4o-mini` |
 | `DEEPSEEK_API_KEY` | Your DeepSeek API Key. | **Required for deepseek** |
 | `DEEPSEEK_MODEL` | The DeepSeek model to use. | `deepseek-chat` |
-| `GENAI_OUTPUT_TYPE` | Storage target: `FILE`, `DB`, or `BOTH`. | `BOTH` |
-| `GENAI_MAX_OUTPUTS` | Max number of insights to keep (0 for unlimited). | `0` |
+| `OUTPUT_TYPE` | Storage target: `FILE`, `DB`, or `BOTH`. | `BOTH` |
+| `MAX_OUTPUTS` | Max number of insights to keep (0 for unlimited). | `0` |
+| `MEMORY_ENABLED` | Enable perennial memory (Mem0). | `false` |
 | `MEM0_DIR` | Directory to store `mem0` vector data. | `/app/data/mem0` |
 
 ### Graylog SIEM Enrichment
