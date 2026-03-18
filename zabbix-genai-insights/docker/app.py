@@ -11,6 +11,7 @@ from typing import Dict, Any
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import genai_engine
 import openai_engine
+import dsk_engine
 import db
 import memory_manager
 
@@ -26,6 +27,10 @@ GENAI_MODEL = os.environ.get("GENAI_MODEL", "gemini-pro")
 # OpenAI Config
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+
+# DeepSeek Config
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
+DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
 
 # Shared Prompt Config
 DEFAULT_PROMPT = os.environ.get("DEFAULT_PROMPT")
@@ -82,6 +87,17 @@ async def background_process_alert(event_id: str, event_data: Dict[str, Any]):
                 event_data=event_data,
                 openai_api_key=key_to_use,
                 model_name=OPENAI_MODEL,
+                custom_prompt=DEFAULT_PROMPT,
+                graylog_enabled=GRAYLOG_ENABLED,
+                mcp_url=ZABBIX_MCP_URL,
+                memories=memories
+            )
+        elif req_provider == "deepseek":
+            key_to_use = req_api_key or DEEPSEEK_API_KEY
+            result = await dsk_engine.analyze_alert(
+                event_data=event_data,
+                dsk_api_key=key_to_use,
+                model_name=DEEPSEEK_MODEL,
                 custom_prompt=DEFAULT_PROMPT,
                 graylog_enabled=GRAYLOG_ENABLED,
                 mcp_url=ZABBIX_MCP_URL,
@@ -178,6 +194,8 @@ async def analyze_event(event_data: Dict[str, Any], background_tasks: Background
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured or provided")
     elif req_provider == "gemini" and not (GOOGLE_API_KEY or req_api_key):
         raise HTTPException(status_code=500, detail="GOOGLE_API_KEY not configured or provided")
+    elif req_provider == "deepseek" and not (DEEPSEEK_API_KEY or req_api_key):
+        raise HTTPException(status_code=500, detail="DEEPSEEK_API_KEY not configured or provided")
 
     # Extract event_id immediately
     event_id = (
@@ -217,7 +235,13 @@ async def get_output(event_id: str):
 
 @app.get("/health")
 async def health_check():
-    model_used = OPENAI_MODEL if AI_PROVIDER == "openai" else GENAI_MODEL
+    if AI_PROVIDER == "openai":
+        model_used = OPENAI_MODEL
+    elif AI_PROVIDER == "deepseek":
+        model_used = DEEPSEEK_MODEL
+    else:
+        model_used = GENAI_MODEL
+        
     health_status = {
         "status": "ok",
         "provider": AI_PROVIDER,

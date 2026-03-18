@@ -1,6 +1,6 @@
 # Zabbix AI Alert API (Docker Version)
 
-This directory contains the dockerized version of the AI alert system, providing a FastAPI-based web service for processing Zabbix alerts using Gemini or OpenAI.
+This directory contains the dockerized version of the AI alert system, providing a FastAPI-based web service for processing Zabbix alerts using Gemini, OpenAI, or DeepSeek.
 
 ## Features
 
@@ -8,6 +8,7 @@ This directory contains the dockerized version of the AI alert system, providing
 - **SQLite Persistence**: Stores generated insights with status tracking (`PENDING`, `COMPLETED`).
 - **HTML Listing UI**: Beautiful dashboard at `/outputs` with status badges.
 - **Graylog SIEM Enrichment**: Shared core logic with filtering.
+- **Perennial Memory (Mem0ai)**: Intelligent memory layer that retains key facts per host across multiple alerts.
 - **Retention Policy**: Automatic pruning (`GENAI_MAX_OUTPUTS`).
 
 ## Project Structure
@@ -16,6 +17,7 @@ This directory is organized into modular components to ensure maintainability an
 
 - **`app.py`**: The core API layer. Handles FastAPI routes, background task orchestration, and environment configuration.
 - **`db.py`**: The data persistence layer. Contains all SQLite logic, including WAL mode configuration, connection handling, and optimized queries.
+- **`memory_manager.py`**: The perennial memory layer. Wraps `mem0ai` to extract and store host-specific facts in a dedicated vector store.
 - **`html_template.tpl`**: The visual layer. A standalone HTML/CSS template for the `/outputs` dashboard, separate from the application logic.
 - **`Dockerfile` & `docker-compose.yml`**: Containerization and orchestration logic.
 
@@ -79,14 +81,17 @@ curl -X GET "http://localhost:8000/outputs/12346"
 ### Core Configuration
 | Variable | Description | Default |
 | :--- | :--- | :--- |
-| `AI_PROVIDER` | `gemini` or `openai`. | `gemini` |
+| `AI_PROVIDER` | `gemini`, `openai`, or `deepseek`. | `gemini` |
 | `DEFAULT_PROMPT` | Custom persona or context prompt for the AI. | Professional Blockchain Specialist |
 | `GOOGLE_API_KEY` | Your Google Gemini API Key. | **Required for gemini** |
 | `GENAI_MODEL` | The Gemini model to use for analysis. | `gemini-pro` |
 | `OPENAI_API_KEY` | Your OpenAI API Key. | **Required for openai** |
 | `OPENAI_MODEL` | The OpenAI model to use. | `gpt-4o-mini` |
+| `DEEPSEEK_API_KEY` | Your DeepSeek API Key. | **Required for deepseek** |
+| `DEEPSEEK_MODEL` | The DeepSeek model to use. | `deepseek-chat` |
 | `GENAI_OUTPUT_TYPE` | Storage target: `FILE`, `DB`, or `BOTH`. | `BOTH` |
 | `GENAI_MAX_OUTPUTS` | Max number of insights to keep (0 for unlimited). | `0` |
+| `MEM0_DIR` | Directory to store `mem0` vector data. | `/app/data/mem0` |
 
 ### Graylog SIEM Enrichment
 | Variable | Description | Default |
@@ -111,8 +116,20 @@ Exclusion filters for `kernel`, `sshd`, `CRON`, and `systemd` are applied at the
 ## Zabbix MCP Server Integration
 
 To enable MCP support, set `MCP_ENABLED=true` in `.env` and specify the `ZABBIX_MCP_URL`.
-The system connects to the MCP Server using Server-Sent Events (SSE). It exposes the server's tools (like fetching hosts, items, and problems) to the AI as native function calls. The AI dynamically decides if it needs to execute those actions to understand the alert better.
+The system connects to the MCP Server using Server-Sent Events (SSE). It exposes the server's tools (like fetching hosts, items, and problems) to the AI as native function calls. The AI dynamically decides if it needs to execute those actions to understand the alert better. Supported by Gemini, OpenAI and DeepSeek engines.
+
+## Perennial Memory (Mem0ai)
+
+The system utilizes `mem0ai` to create a "perennial" memory base. 
+Unlike raw history, `mem0` extracts core technical facts from previous insights. When a new alert arrives for the same `HOST`, the agent retrieves these facts (e.g., "This host is a high-load database server with recurring memory pressure") to provide deeper context.
+
+Memories are stored in a local ChromaDB vector store inside `${MEM0_DIR}`.
 
 ## Persistence
 
-Insights are stored in `./data/genai_insights.db` and as `.txt` files in `./outputs/` depending on the `GENAI_OUTPUT_TYPE` setting.
+
+## DeepSeek Specifics
+
+The DeepSeek engine (`dsk_engine.py`) uses an OpenAI-compatible API. Both the analysis and the perennial memory manager support DeepSeek as a back-end. 
+
+Insights are stored in `./data/genai_insights.db` and as `.txt` files in `./outputs/`. Perennial memories are stored in `./data/mem0/`.
