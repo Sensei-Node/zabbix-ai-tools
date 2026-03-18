@@ -49,17 +49,45 @@ def get_memory_instance():
             # Mem0 requires an LLM for fact extraction and an embedder for vector search.
             
             # Priority 1: AI_API_KEY (General purpose)
-            # If AI_API_KEY is provided, we try to use it with OpenAI provider by default as it's common
+            # This unified block now respects AI_PROVIDER for better compatibility.
             if AI_API_KEY:
-                logger.info("Configuring Mem0 with unified AI_API_KEY.")
-                config["llm"] = {
-                    "provider": "openai",
-                    "config": {"model": AI_MODEL or "gpt-4o-mini", "api_key": AI_API_KEY}
-                }
-                config["embedder"] = {
-                    "provider": "openai",
-                    "config": {"model": "text-embedding-3-small", "api_key": AI_API_KEY}
-                }
+                logger.info(f"Configuring Mem0 with unified AI_API_KEY and provider: {AI_PROVIDER}")
+                
+                if AI_PROVIDER == "gemini":
+                    config["llm"] = {
+                        "provider": "gemini",
+                        "config": {"model": AI_MODEL or "gemini-1.5-flash", "api_key": AI_API_KEY}
+                    }
+                    config["embedder"] = {
+                        "provider": "gemini",
+                        "config": {"model": "gemini-embedding-001", "api_key": AI_API_KEY}
+                    }
+                elif AI_PROVIDER == "deepseek":
+                    config["llm"] = {
+                        "provider": "openai",
+                        "config": {
+                            "model": AI_MODEL or "deepseek-chat", 
+                            "api_key": AI_API_KEY,
+                            "base_url": "https://api.deepseek.com"
+                        }
+                    }
+                    # DeepSeek doesn't have a standard embedding API; fallback to OpenAI if possible
+                    if OPENAI_API_KEY:
+                        config["embedder"] = {
+                            "provider": "openai",
+                            "config": {"model": "text-embedding-3-small", "api_key": OPENAI_API_KEY}
+                        }
+                    else:
+                        logger.warning("DeepSeek used with unified key but no OpenAI key for embeddings. Memory might be limited.")
+                else: # Default or OpenAI
+                    config["llm"] = {
+                        "provider": "openai",
+                        "config": {"model": AI_MODEL or "gpt-4o-mini", "api_key": AI_API_KEY}
+                    }
+                    config["embedder"] = {
+                        "provider": "openai",
+                        "config": {"model": "text-embedding-3-small", "api_key": AI_API_KEY}
+                    }
 
             # Priority 2: Specific Provider Keys
             elif OPENAI_API_KEY:
@@ -100,7 +128,7 @@ def get_memory_instance():
                 }
                 config["embedder"] = {
                     "provider": "gemini",
-                    "config": {"model": "models/embedding-001", "api_key": GOOGLE_API_KEY}
+                    "config": {"model": "gemini-embedding-001", "api_key": GOOGLE_API_KEY}
                 }
             
             elif not (AI_API_KEY or OPENAI_API_KEY or DEEPSEEK_API_KEY or GOOGLE_API_KEY):
@@ -108,7 +136,7 @@ def get_memory_instance():
                 return None
             
             # 2. Set Metadata store path to ensure it stays in DATA_DIR
-            # In newer Mem0 versions, this preserves the SQLite db in the specified location.
+            # In newer Mem0 versions, this preserves the SQLite dbß in the specified location.
             # We use an environment variable trick that mem0 respects or explicit config if supported.
             os.environ["MEM0_HOME"] = DATA_DIR 
             
