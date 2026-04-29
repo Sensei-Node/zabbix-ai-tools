@@ -96,3 +96,95 @@ def get_insight_by_id(event_id):
     row = cursor.fetchone()
     conn.close()
     return row
+
+
+# ---------------------------------------------------------------------------
+# Historical context queries (used by genai_engine for memory enrichment)
+# ---------------------------------------------------------------------------
+
+def get_recent_insights_for_host(hostname: str, limit: int = 5) -> list[dict]:
+    """
+    Retrieve the most recent completed insights whose raw_data contains
+    the given hostname.  Used to give the LLM awareness of recurring
+    patterns on the same host.
+
+    Returns a list of dicts with keys: event_id, created_at, insight (truncated),
+    trigger, severity.
+    """
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    # Search raw_data JSON for the hostname (case-insensitive LIKE)
+    cursor.execute(
+        """
+        SELECT event_id, created_at, insight, raw_data
+        FROM insights
+        WHERE status = 'COMPLETED'
+          AND (raw_data LIKE ? OR raw_data LIKE ?)
+        ORDER BY created_at DESC
+        LIMIT ?
+        """,
+        (f'%"HOST":"{hostname}%', f'%"host":"{hostname}%', limit),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    results = []
+    for event_id, created_at, insight, raw_data in rows:
+        try:
+            data = json.loads(raw_data) if raw_data else {}
+        except (json.JSONDecodeError, TypeError):
+            data = {}
+
+        # Truncate insight to avoid blowing up the prompt
+        short_insight = insight[:300] + "..." if len(insight) > 300 else insight
+
+        results.append({
+            "event_id": event_id,
+            "created_at": created_at,
+            "insight_summary": short_insight,
+            "trigger": data.get("TRIGGER_NAME") or data.get("trigger_name") or "N/A",
+            "severity": data.get("TRIGGER_SEVERITY") or data.get("severity") or "N/A",
+        })
+    return results
+
+
+def get_recent_insights_global(minutes: int = 60, limit: int = 10) -> list[dict]:
+    """
+    Retrieve the most recent completed insights across all hosts within
+    a time window.  Used to detect correlated failures across the
+    infrastructure.
+
+    Returns a list of dicts with keys: event_id, created_at, host, trigger,
+    severity.
+    """
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT event_id, created_at, raw_data
+        FROM insights
+        WHERE status = 'COMPLETED'
+          AND created_at >= datetime('now', ?)
+        ORDER BY created_at DESC
+        LIMIT ?
+        """,
+        (f"-{minutes} minutes", limit),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    results = []
+    for event_id, created_at, raw_data in rows:
+        try:
+            data = json.loads(raw_data) if raw_data else {}
+        except (json.JSONDecodeError, TypeError):
+            data = {}
+
+        results.append({
+            "event_id": event_id,
+            "created_at": created_at,
+            "host": data.get("HOST") or data.get("host") or "unknown",
+            "trigger": data.get("TRIGGER_NAME") or data.get("trigger_name") or "N/A",
+            "severity": data.get("TRIGGER_SEVERITY") or data.get("severity") or "N/A",
+        })
+    return results

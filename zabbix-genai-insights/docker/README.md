@@ -5,6 +5,7 @@ This directory contains the dockerized version of the GenAI alert system, provid
 ## Features
 
 - **Multi-Provider LLM**: Switch between Gemini, OpenAI, DeepSeek, or Ollama via environment variables.
+- **Contextual Memory**: Queries historical insights from SQLite to detect recurring patterns and cross-host correlations.
 - **Asynchronous Processing**: Immediate `202 Accepted` response to prevent Zabbix webhook timeouts.
 - **SQLite Persistence**: Stores generated insights with status tracking (`PENDING`, `COMPLETED`, `ERROR`).
 - **HTML Dashboard**: Browse insights at `/outputs` with status badges and search.
@@ -26,9 +27,17 @@ The Docker version also leverages shared modules from the parent directory:
 
 | Module | Description |
 | :--- | :--- |
-| `genai_engine.py` | Core analysis engine with structured prompt building |
+| `genai_engine.py` | Core analysis engine with structured prompt building and contextual memory |
 | `llm_provider.py` | Multi-provider LLM abstraction (Gemini, OpenAI, DeepSeek, Ollama) |
 | `siem_fetching.py` | Graylog log search, deduplication, and summarization |
+
+## Contextual Memory
+
+The Docker version leverages SQLite to provide **contextual memory** across alerts:
+
+- **Host-level recurrence**: Before analyzing a new alert, the engine queries the last 5 insights for the same host. If the host has been alerting repeatedly, the LLM factors this into severity assessment and recommendations.
+- **Cross-host correlation**: The engine also fetches the last 10 alerts across all hosts from the past 60 minutes. If multiple hosts are alerting concurrently, the LLM can identify systemic or network-level failures.
+- **Graceful degradation**: In standalone CLI mode (no DB), memory is silently skipped — no configuration needed.
 
 ## Prerequisites
 

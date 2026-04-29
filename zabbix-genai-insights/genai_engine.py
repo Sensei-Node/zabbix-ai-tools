@@ -3,6 +3,11 @@ Core analysis engine for Zabbix GenAI Insights.
 
 Shared between the standalone CLI script (genai_alert.py) and the
 Dockerized FastAPI service (docker/app.py).
+
+Supports contextual memory: when running inside Docker (with db.py available),
+the engine queries historical insights for the same host and recent global
+alerts, injecting them into the prompt so the LLM can detect recurring
+patterns, escalate severity, and correlate cross-host failures.
 """
 
 import os
@@ -18,28 +23,121 @@ from llm_provider import get_provider
 # ---------------------------------------------------------------------------
 
 DEFAULT_PROMPT = """You are a senior infrastructure and observability analyst.
-You will receive a Zabbix alert event and, optionally, correlated SIEM logs.
+You will receive a Zabbix alert event and, optionally, correlated SIEM logs
+and historical context from previous alerts.
 
 Analyze the data following this structure:
 1. **Summary**: One-line description of the incident.
 2. **Root Cause Analysis**: What likely caused this alert based on the data.
 3. **Severity Assessment**: Rate as Critical / High / Medium / Low with justification.
+   - If this host has had recent similar alerts, factor recurrence into the severity.
+   - If multiple hosts are alerting simultaneously, consider systemic failure.
 4. **Correlated Evidence**: If SIEM logs are present, highlight the most relevant entries.
-5. **Recommended Actions**: Numbered list of concrete steps to resolve or mitigate.
-6. **Prevention**: What can be done to prevent recurrence.
+5. **Historical Pattern**: If previous insights are provided, describe the pattern
+   (recurring issue, escalation, new problem, etc.).
+6. **Recommended Actions**: Numbered list of concrete steps to resolve or mitigate.
+7. **Prevention**: What can be done to prevent recurrence.
 
 Be concise and technical. Prioritize actionable information."""
+
+
+# ---------------------------------------------------------------------------
+# Memory / historical context
+# ---------------------------------------------------------------------------
+
+def _try_get_host_history(hostname: str) -> list[dict]:
+    """
+    Attempt to fetch recent insights for a host from the DB.
+    Returns an empty list when running outside Docker (no db module).
+    """
+    try:
+        import db
+        return db.get_recent_insights_for_host(hostname, limit=5)
+    except Exception:
+        return []
+
+
+def _try_get_global_history(minutes: int = 60) -> list[dict]:
+    """
+    Attempt to fetch recent global insights from the DB.
+    Returns an empty list when running outside Docker (no db module).
+    """
+    try:
+        import db
+        return db.get_recent_insights_global(minutes=minutes, limit=10)
+    except Exception:
+        return []
+
+
+def build_historical_context(
+    hostname: str,
+    current_event_id: str = None,
+) -> str:
+    """
+    Build a historical context section for the prompt by querying the
+    insights database.
+
+    Includes:
+    - Recent alerts for the same host (recurrence detection)
+    - Recent alerts across all hosts (cross-host correlation)
+
+    Returns an empty string when no history is available (e.g. standalone mode).
+    """
+    sections: list[str] = []
+
+    # --- Host-specific history ---
+    host_history = _try_get_host_history(hostname)
+    # Exclude the current event from history (it may already be PENDING in DB)
+    if current_event_id:
+        host_history = [h for h in host_history if h["event_id"] != current_event_id]
+
+    if host_history:
+        sections.append("## Historical Alerts for This Host")
+        sections.append(
+            f"The following {len(host_history)} recent alert(s) were found "
+            f"for host `{hostname}`:"
+        )
+        for entry in host_history:
+            sections.append(
+                f"- **[{entry['created_at']}]** Trigger: {entry['trigger']} | "
+                f"Severity: {entry['severity']}\n"
+                f"  Insight excerpt: {entry['insight_summary']}"
+            )
+
+    # --- Global recent alerts (cross-host correlation) ---
+    global_history = _try_get_global_history(minutes=60)
+    # Exclude current event and same-host entries (already shown above)
+    if current_event_id:
+        global_history = [g for g in global_history if g["event_id"] != current_event_id]
+    other_hosts = [g for g in global_history if g["host"].split("_")[0] != hostname]
+
+    if other_hosts:
+        sections.append("\n## Recent Alerts on Other Hosts (last 60 min)")
+        sections.append(
+            "These concurrent alerts may indicate a systemic or network-level issue:"
+        )
+        for entry in other_hosts[:7]:
+            sections.append(
+                f"- **[{entry['created_at']}]** Host: `{entry['host']}` | "
+                f"Trigger: {entry['trigger']} | Severity: {entry['severity']}"
+            )
+
+    return "\n".join(sections) if sections else ""
 
 
 # ---------------------------------------------------------------------------
 # Context builders
 # ---------------------------------------------------------------------------
 
-def build_structured_context(event_data: dict, siem_logs: str = "") -> str:
+def build_structured_context(
+    event_data: dict,
+    siem_logs: str = "",
+    historical_context: str = "",
+) -> str:
     """
-    Build a well-organized context string from raw Zabbix event data and
-    optional SIEM logs so the LLM receives structured input instead of a
-    raw JSON blob.
+    Build a well-organized context string from raw Zabbix event data,
+    optional SIEM logs, and optional historical context so the LLM
+    receives structured input instead of a raw JSON blob.
     """
     sections: list[str] = []
 
@@ -67,6 +165,11 @@ def build_structured_context(event_data: dict, siem_logs: str = "") -> str:
         f"{json.dumps(event_data, indent=2, ensure_ascii=False)}\n```"
     )
 
+    # Historical context (memory)
+    if historical_context:
+        sections.append(f"\n{historical_context}")
+
+    # SIEM logs
     if siem_logs:
         sections.append(f"\n## Correlated SIEM Logs (Graylog)\n{siem_logs}")
 
@@ -119,25 +222,36 @@ def analyze_alert(
     except Exception as exc:
         return {"error": f"LLM provider initialization failed: {exc}"}
 
+    # --- Extract host info ---
+    host_raw = event_data.get("HOST") or event_data.get("host") or ""
+    hostname = host_raw.split("_")[0] if host_raw else "unknown"
+    event_id = (
+        event_data.get("EVENT_ID")
+        or event_data.get("event_id")
+        or event_data.get("id")
+    )
+
     # --- 1. SIEM Enrichment ---
     siem_logs = ""
-    if graylog_enabled:
-        host_raw = event_data.get("HOST") or event_data.get("host")
-        if host_raw:
-            siem_logs = siem_fetching.search_graylog(host_raw)
+    if graylog_enabled and host_raw:
+        siem_logs = siem_fetching.search_graylog(host_raw)
 
-    # --- 2. Build prompt ---
+    # --- 2. Historical context (memory) ---
+    historical_context = build_historical_context(hostname, current_event_id=event_id)
+
+    # --- 3. Build prompt ---
     selected_prompt = custom_prompt if custom_prompt else DEFAULT_PROMPT
-    context = build_structured_context(event_data, siem_logs)
+    context = build_structured_context(event_data, siem_logs, historical_context)
     prompt = f"{selected_prompt}\n\n{context}"
 
-    # --- 3. Call LLM ---
+    # --- 4. Call LLM ---
     try:
         response_text = provider.generate(prompt)
         return {
             "insight": response_text,
             "siem_logs": siem_logs,
             "model": provider.name(),
+            "historical_context_used": bool(historical_context),
         }
     except Exception as exc:
         return {"error": f"Error calling {provider.name()}: {exc}"}
