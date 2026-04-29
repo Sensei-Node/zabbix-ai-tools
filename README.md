@@ -13,9 +13,11 @@ An implementation of a Model Context Protocol (MCP) server for Zabbix. It allows
 - **Port**: 8000 (default)
 
 ### 2. [zabbix-genai-insights](./zabbix-genai-insights)
-A toolset for analyzing Zabbix alerts using GenAI. It includes logic for SIEM data enrichment and automated alert analysis.
-- **Key Files**: `genai_alert.py`, `genai_engine.py`, `siem_fetching.py`
-- **Docker**: Located in the `./zabbix-genai-insights/docker` directory.
+A toolset for analyzing Zabbix alerts using Generative AI with SIEM (Graylog) enrichment. Supports multiple LLM providers.
+- **Key Files**: `genai_alert.py`, `genai_engine.py`, `llm_provider.py`, `siem_fetching.py`
+- **Docker**: Located in `./zabbix-genai-insights/docker`
+- **Supported LLM Providers**: Google Gemini, OpenAI (GPT-4o), DeepSeek, Ollama (local models)
+- **SIEM Integration**: Graylog log correlation with deduplication and statistical summaries
 
 ---
 
