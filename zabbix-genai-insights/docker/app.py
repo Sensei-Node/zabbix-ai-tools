@@ -37,6 +37,9 @@ LLM_MODEL = os.environ.get("LLM_MODEL") or GENAI_MODEL
 # Graylog
 GRAYLOG_ENABLED = os.environ.get("GRAYLOG_ENABLED", "false").lower() == "true"
 
+# MCP (Zabbix MCP Server)
+MCP_ENABLED = os.environ.get("MCP_ENABLED", "false").lower() == "true"
+
 # HTML Templates
 TEMPLATE_DIR = os.path.dirname(__file__)
 
@@ -133,6 +136,7 @@ async def background_process_alert(event_id: str, event_data: Dict[str, Any]):
             model_name=GENAI_MODEL,
             custom_prompt=GENAI_PROMPT,
             graylog_enabled=GRAYLOG_ENABLED,
+            mcp_enabled=MCP_ENABLED,
         )
 
         insight = result.get("insight", result.get("error", "Unknown error"))
@@ -433,4 +437,5 @@ async def health_check():
         "model": LLM_MODEL,
         "output_type": GENAI_OUTPUT_TYPE,
         "graylog_enabled": GRAYLOG_ENABLED,
+        "mcp_enabled": MCP_ENABLED,
     }

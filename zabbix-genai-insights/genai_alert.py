@@ -24,6 +24,7 @@ GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 GENAI_PROMPT = os.environ.get("GENAI_PROMPT")
 GENAI_MODEL = os.environ.get("GENAI_MODEL", "gemini-pro")
 GRAYLOG_ENABLED = os.environ.get("GRAYLOG_ENABLED", "false").lower() == "true"
+MCP_ENABLED = os.environ.get("MCP_ENABLED", "false").lower() == "true"
 
 
 # ---------------------------------------------------------------------------
@@ -91,6 +92,7 @@ def main():
         model_name=GENAI_MODEL,
         custom_prompt=GENAI_PROMPT,
         graylog_enabled=GRAYLOG_ENABLED,
+        mcp_enabled=MCP_ENABLED,
     )
 
     if "error" in result:

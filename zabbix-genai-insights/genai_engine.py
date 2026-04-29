@@ -16,6 +16,7 @@ from collections import Counter
 from datetime import datetime
 
 import siem_fetching
+import mcp_fetching
 from llm_provider import get_provider
 
 # ---------------------------------------------------------------------------
@@ -133,11 +134,13 @@ def build_structured_context(
     event_data: dict,
     siem_logs: str = "",
     historical_context: str = "",
+    mcp_context: str = "",
 ) -> str:
     """
     Build a well-organized context string from raw Zabbix event data,
-    optional SIEM logs, and optional historical context so the LLM
-    receives structured input instead of a raw JSON blob.
+    optional SIEM logs, optional historical context, and optional MCP
+    enrichment so the LLM receives structured input instead of a raw
+    JSON blob.
     """
     sections: list[str] = []
 
@@ -165,6 +168,10 @@ def build_structured_context(
         f"{json.dumps(event_data, indent=2, ensure_ascii=False)}\n```"
     )
 
+    # MCP enrichment (live Zabbix data)
+    if mcp_context:
+        sections.append(f"\n{mcp_context}")
+
     # Historical context (memory)
     if historical_context:
         sections.append(f"\n{historical_context}")
@@ -186,6 +193,7 @@ def analyze_alert(
     model_name: str = None,
     custom_prompt: str = None,
     graylog_enabled: bool = False,
+    mcp_enabled: bool = False,
 ) -> dict:
     """
     Core analysis entry-point shared between standalone script and Docker API.
@@ -204,6 +212,8 @@ def analyze_alert(
         If provided, replaces the default structured prompt.
     graylog_enabled : bool
         Whether to fetch SIEM enrichment logs from Graylog.
+    mcp_enabled : bool
+        Whether to fetch live Zabbix context from the MCP Server.
 
     Returns
     -------
@@ -236,15 +246,22 @@ def analyze_alert(
     if graylog_enabled and host_raw:
         siem_logs = siem_fetching.search_graylog(host_raw)
 
-    # --- 2. Historical context (memory) ---
+    # --- 2. MCP Enrichment (live Zabbix data) ---
+    mcp_context = ""
+    if mcp_enabled and hostname != "unknown":
+        mcp_context = mcp_fetching.enrich_from_mcp(hostname)
+
+    # --- 3. Historical context (memory) ---
     historical_context = build_historical_context(hostname, current_event_id=event_id)
 
-    # --- 3. Build prompt ---
+    # --- 4. Build prompt ---
     selected_prompt = custom_prompt if custom_prompt else DEFAULT_PROMPT
-    context = build_structured_context(event_data, siem_logs, historical_context)
+    context = build_structured_context(
+        event_data, siem_logs, historical_context, mcp_context
+    )
     prompt = f"{selected_prompt}\n\n{context}"
 
-    # --- 4. Call LLM ---
+    # --- 5. Call LLM ---
     try:
         response_text = provider.generate(prompt)
         return {
@@ -252,6 +269,7 @@ def analyze_alert(
             "siem_logs": siem_logs,
             "model": provider.name(),
             "historical_context_used": bool(historical_context),
+            "mcp_context_used": bool(mcp_context),
         }
     except Exception as exc:
         return {"error": f"Error calling {provider.name()}: {exc}"}
