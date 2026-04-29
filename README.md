@@ -3,6 +3,10 @@ ZABBIX AI TOOLS
 
 This repository contains a suite of AI-powered integrations and tools designed to enhance Zabbix monitoring capabilities through Generative AI and the Model Context Protocol (MCP).
 
+## Architecture
+
+![Component Architecture](docs/architecture.svg)
+
 ## Project Structure
 
 The repository is organized into two main component projects:
@@ -13,11 +17,12 @@ An implementation of a Model Context Protocol (MCP) server for Zabbix. It allows
 - **Port**: 8000 (default)
 
 ### 2. [zabbix-genai-insights](./zabbix-genai-insights)
-A toolset for analyzing Zabbix alerts using Generative AI with SIEM (Graylog) enrichment. Supports multiple LLM providers.
-- **Key Files**: `genai_alert.py`, `genai_engine.py`, `llm_provider.py`, `siem_fetching.py`
+A toolset for analyzing Zabbix alerts using Generative AI with SIEM (Graylog) and MCP enrichment. Supports multiple LLM providers.
+- **Key Files**: `genai_alert.py`, `genai_engine.py`, `llm_provider.py`, `siem_fetching.py`, `mcp_fetching.py`
 - **Docker**: Located in `./zabbix-genai-insights/docker`
 - **Supported LLM Providers**: Google Gemini, OpenAI (GPT-4o), DeepSeek, Ollama (local models)
 - **SIEM Integration**: Graylog log correlation with deduplication and statistical summaries
+- **MCP Integration**: Optional enrichment via the Zabbix MCP Server — fetches live host details, active problems, and recent events to provide real-time Zabbix context to the LLM
 
 ---
 

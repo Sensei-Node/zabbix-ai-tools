@@ -6,12 +6,14 @@ This directory contains the dockerized version of the GenAI alert system, provid
 
 - **Multi-Provider LLM**: Switch between Gemini, OpenAI, DeepSeek, or Ollama via environment variables.
 - **Contextual Memory**: Queries historical insights from SQLite to detect recurring patterns and cross-host correlations.
+- **MCP Enrichment**: Optional integration with the Zabbix MCP Server to fetch live host details, active problems, and recent events — providing real-time Zabbix context to the LLM.
 - **Asynchronous Processing**: Immediate `202 Accepted` response to prevent Zabbix webhook timeouts.
 - **SQLite Persistence**: Stores generated insights with status tracking (`PENDING`, `COMPLETED`, `ERROR`).
 - **HTML Dashboard**: Browse insights at `/outputs` with status badges and search.
 - **Graylog SIEM Enrichment**: Automatic log correlation with deduplication and statistical summaries.
 - **Structured Prompts**: Chain-of-thought prompt engineering for consistent, actionable output.
 - **Retention Policy**: Automatic pruning via `GENAI_MAX_OUTPUTS`.
+- **Non-blocking Enrichment**: Both SIEM and MCP enrichment are fault-tolerant — if either service is unavailable, insights are generated normally without that context.
 
 ## Project Structure
 
@@ -28,9 +30,10 @@ The Docker version also leverages shared modules from the parent directory:
 
 | Module | Description |
 | :--- | :--- |
-| `genai_engine.py` | Core analysis engine with structured prompt building and contextual memory |
+| `genai_engine.py` | Core analysis engine with structured prompt building, contextual memory, and non-blocking enrichment orchestration |
 | `llm_provider.py` | Multi-provider LLM abstraction (Gemini, OpenAI, DeepSeek, Ollama) |
 | `siem_fetching.py` | Graylog log search, deduplication, and summarization |
+| `mcp_fetching.py` | Zabbix MCP Server integration — live host, problem, and event data via MCP SSE protocol |
 
 ## Contextual Memory
 
@@ -108,7 +111,8 @@ Health check with provider and configuration details.
   "provider": "gemini",
   "model": "gemini-pro",
   "output_type": "BOTH",
-  "graylog_enabled": false
+  "graylog_enabled": false,
+  "mcp_enabled": false
 }
 ```
 
@@ -144,6 +148,14 @@ Health check with provider and configuration details.
 | `GRAYLOG_SEARCH_MINUTES` | Search window in minutes | `30` |
 | `GRAYLOG_SEARCH_LIMIT` | Max log entries to fetch per query | `100` |
 | `GRAYLOG_VERIFY_SSL` | Verify SSL certificates for Graylog | `false` |
+
+### MCP (Zabbix MCP Server)
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `MCP_ENABLED` | Enable live Zabbix enrichment via MCP Server | `false` |
+| `ZABBIX_MCP_URL` | MCP Server SSE endpoint URL | `http://zabbix-mcp:8000/sse` |
+| `MCP_TIMEOUT` | Timeout in seconds for MCP requests | `15` |
 
 ## Graylog Enrichment Details
 

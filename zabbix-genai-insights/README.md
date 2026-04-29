@@ -1,29 +1,38 @@
 # Zabbix GenAI Alert System
 
-A unified system for analyzing Zabbix alerts using Generative AI with SIEM (Graylog) enrichment. Supports multiple LLM providers including Google Gemini, OpenAI, DeepSeek, and local models via Ollama.
+A unified system for analyzing Zabbix alerts using Generative AI with SIEM (Graylog) and Zabbix MCP Server enrichment. Supports multiple LLM providers including Google Gemini, OpenAI, DeepSeek, and local models via Ollama.
 
 ## Architecture
+
+![Component Architecture](../docs/architecture.svg)
+
+<details>
+<summary>Text version</summary>
 
 ```
 ┌──────────┐     ┌──────────────┐     ┌───────────────┐     ┌─────────────┐
 │  Zabbix   │────▶│ genai_engine │────▶│ llm_provider  │────▶│ Gemini /    │
 │  Alert    │     │   (core)     │     │ (abstraction) │     │ OpenAI /    │
-└──────────┘     └──────┬───────┘     └───────────────┘     │ DeepSeek /  │
-                        │                                    │ Ollama      │
-                        ▼                                    └─────────────┘
-                 ┌──────────────┐
-                 │siem_fetching │
-                 │  (Graylog)   │
-                 └──────────────┘
+└──────────┘     └──┬────┬──────┘     └───────────────┘     │ DeepSeek /  │
+                    │    │                                   │ Ollama      │
+                    │    │                                   └─────────────┘
+                    ▼    ▼
+          ┌────────────┐ ┌──────────────┐
+          │siem_fetching│ │ mcp_fetching │
+          │  (Graylog)  │ │(Zabbix MCP)  │
+          └────────────┘ └──────────────┘
 ```
+
+</details>
 
 ### Shared Modules
 
 | Module | Description |
 | :--- | :--- |
-| `genai_engine.py` | Core analysis engine — builds structured prompts, orchestrates SIEM enrichment, calls the LLM |
+| `genai_engine.py` | Core analysis engine — builds structured prompts, orchestrates SIEM and MCP enrichment, calls the LLM |
 | `llm_provider.py` | Multi-provider abstraction layer — factory pattern for switching between LLM backends |
 | `siem_fetching.py` | Graylog integration — log search, deduplication, statistical summary |
+| `mcp_fetching.py` | Zabbix MCP Server integration — fetches live host details, active problems, and recent events via MCP SSE protocol |
 
 Both the standalone CLI and the Docker API share these modules, ensuring consistent analysis regardless of deployment mode.
 
@@ -137,6 +146,43 @@ When `GRAYLOG_ENABLED=true`, the system automatically:
 
 This gives the AI model real operational context beyond the alert metadata alone.
 
+## MCP Enrichment (Zabbix MCP Server)
+
+When `MCP_ENABLED=true`, the system connects to the [Zabbix MCP Server](../zabbix-mcp-server) to fetch live monitoring data and inject it into the LLM prompt. This provides the AI model with real-time Zabbix context that goes beyond the static alert payload.
+
+### What it fetches
+
+| Data | MCP Tool | Description |
+| :--- | :--- | :--- |
+| Host details | `host_get` | Technical name, visible name, status, availability |
+| Active problems | `problem_get` | Current unresolved problems for the host with severity |
+| Recent events | `event_get` | Latest events for the host (PROBLEM/OK transitions) |
+
+### How it works
+
+1. Opens an SSE connection to the MCP Server at `ZABBIX_MCP_URL`
+2. Performs the MCP handshake (JSON-RPC 2.0 `initialize` / `initialized`)
+3. Calls `host_get` to resolve the host and fetch details
+4. Calls `problem_get` and `event_get` in a batched session for efficiency
+5. Formats the results as structured markdown and injects into the prompt
+
+### Non-blocking design
+
+MCP enrichment is fully optional and fault-tolerant:
+
+- If the MCP Server is unreachable, times out, or returns errors, the insight is generated normally without MCP context
+- Failures are logged as warnings but never block or degrade the analysis pipeline
+- Protection is layered: internal client error handling → `enrich_from_mcp` safety net → `analyze_alert` try/except
+- No additional dependencies required — uses only `requests` (already in the project)
+
+### Configuration
+
+Set in `.env`:
+```bash
+MCP_ENABLED=true
+ZABBIX_MCP_URL=http://zabbix-mcp:8000/sse
+```
+
 ## Environment Variables
 
 ### LLM Configuration
@@ -169,3 +215,11 @@ This gives the AI model real operational context beyond the alert metadata alone
 | `GRAYLOG_SEARCH_MINUTES` | Log search window in minutes | `30` |
 | `GRAYLOG_SEARCH_LIMIT` | Max log entries to fetch | `100` |
 | `GRAYLOG_VERIFY_SSL` | Verify SSL certificates | `false` |
+
+### MCP (Zabbix MCP Server)
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `MCP_ENABLED` | Enable live Zabbix enrichment via MCP Server | `false` |
+| `ZABBIX_MCP_URL` | MCP Server SSE endpoint URL | `http://zabbix-mcp:8000/sse` |
+| `MCP_TIMEOUT` | Timeout in seconds for MCP requests | `15` |
