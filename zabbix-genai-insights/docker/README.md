@@ -19,7 +19,8 @@ This directory contains the dockerized version of the GenAI alert system, provid
 | :--- | :--- |
 | `app.py` | FastAPI routes, background task orchestration, environment configuration |
 | `db.py` | SQLite persistence layer with WAL mode for concurrency |
-| `html_template.tpl` | HTML/CSS template for the `/outputs` dashboard |
+| `html_template.tpl` | HTML/CSS template for the `/outputs` listing dashboard |
+| `html_detail.tpl` | HTML/CSS template for the individual insight detail view |
 | `Dockerfile` | Container build definition |
 | `docker-compose.yml` | Orchestration with volume mounts for data persistence |
 
@@ -83,11 +84,19 @@ curl -X POST http://localhost:8000/analyze \
 
 ### `GET /outputs`
 
-HTML dashboard listing all generated insights with status badges.
+HTML dashboard listing all generated insights. Features:
+- **Stats bar** with counters for total, completed, pending, and error insights
+- **Search** by host, trigger name, event ID, or any text in the card
+- **Filter buttons** to show only completed, pending, or error insights
+- **Rich cards** showing trigger name, host, severity (color-coded dot), item value, timestamp, and event ID
+- **Auto-refresh** when pending items exist (polls every 8 seconds)
 
 ### `GET /outputs/{event_id}`
 
-Retrieve a specific insight as plain text.
+Styled detail page for a single insight. Features:
+- Full insight text with metadata header (host, severity, timestamp, status)
+- Auto-refresh with spinner animation for pending insights
+- Back navigation to the listing dashboard
 
 ### `GET /health`
 
