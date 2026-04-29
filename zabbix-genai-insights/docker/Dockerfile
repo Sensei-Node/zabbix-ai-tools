@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy shared modules from parent
 COPY genai_engine.py /app/genai_engine.py
 COPY siem_fetching.py /app/siem_fetching.py
+COPY mcp_fetching.py /app/mcp_fetching.py
 COPY llm_provider.py /app/llm_provider.py
 
 # Copy app code
