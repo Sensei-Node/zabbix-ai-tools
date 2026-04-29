@@ -408,10 +408,21 @@ def enrich_from_mcp(hostname: str) -> str:
     Opens a **single** MCP SSE session and executes all tool calls within
     it, minimizing connection overhead.
 
-    Returns an empty string when MCP is disabled or no data is available.
+    Returns an empty string when MCP is disabled, no data is available,
+    or any error occurs — MCP enrichment must never block insight generation.
     """
     if not MCP_ENABLED or not hostname:
         return ""
+
+    try:
+        return _enrich_from_mcp_inner(hostname)
+    except Exception as exc:
+        logger.warning("MCP enrichment failed (non-fatal): %s", exc)
+        return ""
+
+
+def _enrich_from_mcp_inner(hostname: str) -> str:
+    """Internal implementation of MCP enrichment — may raise on unexpected errors."""
 
     # --- Step 1: Resolve host ID ---
     host_result = _with_mcp_session([

@@ -12,8 +12,11 @@ patterns, escalate severity, and correlate cross-host failures.
 
 import os
 import json
+import logging
 from collections import Counter
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 import siem_fetching
 import mcp_fetching
@@ -241,15 +244,23 @@ def analyze_alert(
         or event_data.get("id")
     )
 
-    # --- 1. SIEM Enrichment ---
+    # --- 1. SIEM Enrichment (non-blocking) ---
     siem_logs = ""
     if graylog_enabled and host_raw:
-        siem_logs = siem_fetching.search_graylog(host_raw)
+        try:
+            siem_logs = siem_fetching.search_graylog(host_raw)
+        except Exception as exc:
+            logger.warning("SIEM enrichment failed (non-fatal): %s", exc)
+            siem_logs = ""
 
-    # --- 2. MCP Enrichment (live Zabbix data) ---
+    # --- 2. MCP Enrichment (non-blocking) ---
     mcp_context = ""
     if mcp_enabled and hostname != "unknown":
-        mcp_context = mcp_fetching.enrich_from_mcp(hostname)
+        try:
+            mcp_context = mcp_fetching.enrich_from_mcp(hostname)
+        except Exception as exc:
+            logger.warning("MCP enrichment failed (non-fatal): %s", exc)
+            mcp_context = ""
 
     # --- 3. Historical context (memory) ---
     historical_context = build_historical_context(hostname, current_event_id=event_id)
